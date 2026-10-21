@@ -10,3 +10,7 @@
 @media(max-width:360px){.ingredients-editor-header,.ingredient-row{grid-template-columns:26px minmax(60px,1fr) 57px 45px 28px;gap:3px}.ingredient-row input:not([type=radio]){padding:10px 4px}.modal-body{padding:18px 12px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;scroll-behavior:auto!important}}
 @media print{body{background:#fff;color:#000}.sidebar,.topbar,.page-footer,.back,.detail-actions,.toast,.hero,.note-strip,.no-print{display:none!important}.workspace{margin:0;padding:0}main{padding:0;min-height:0}.detail-layout{grid-template-columns:1fr 1.3fr;gap:25px}.ingredients-panel{background:#fff;border:1px solid #aaa}.ingredient input,.steps input{display:none}.ingredient:has(input:checked) label,.steps label:has(input:checked){text-decoration:none;opacity:1;color:#000}.scale-entry input{border:0;padding:0;width:100px}.detail-heading h1{font-size:30px}.recipe-notes{background:#fff}.print-only{display:block}.detail-photo{max-height:180px}dialog{display:none!important}}
+
+/* Direct access to the full backup on every page. */
+.topbar-actions{display:flex;align-items:center;gap:16px}.topbar{height:auto;min-height:79px;gap:12px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+@media(max-width:760px){.topbar{min-height:62px;gap:8px}.topbar-actions .device-label{display:none}.topbar-actions .button{font-size:11px;padding:9px 10px}}
