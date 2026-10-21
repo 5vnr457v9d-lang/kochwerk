@@ -16,6 +16,6 @@
 
 
 
-/* A visible, session-only cooking mode on every view. */
-.topbar{height:auto;min-height:79px;flex-wrap:wrap;gap:8px 14px;padding-top:12px;padding-bottom:10px}.topbar-controls{display:flex;align-items:center;gap:14px}.cook-mode-status{display:flex;align-items:center;justify-content:flex-end;gap:10px;width:100%;color:#67775e;font-size:10px;line-height:1.6}.cook-mode-error{color:#a13d2f}.cook-mode-status .button{font-size:11px;min-height:32px;padding:5px 9px}#cook-retry[hidden]{display:none}#cook-toggle{min-height:44px}.topbar-controls .button:disabled{cursor:default}
-@media(max-width:760px){.topbar{min-height:62px;gap:7px}.topbar-controls{gap:8px}.topbar-controls .device-label{display:none}#cook-toggle{font-size:12px;padding:10px 12px}.cook-mode-status{justify-content:flex-start;font-size:10px}}
+/* Automatic screen wake lock status on every view. */
+.topbar{height:auto;min-height:79px;flex-wrap:wrap;gap:8px 14px;padding-top:12px;padding-bottom:10px}.cook-mode-status{display:flex;align-items:center;justify-content:flex-end;width:100%;color:#67775e;font-size:10px;line-height:1.6}.cook-mode-error{color:#a13d2f}
+@media(max-width:760px){.topbar{min-height:62px;gap:7px}.cook-mode-status{justify-content:flex-start;font-size:10px}}

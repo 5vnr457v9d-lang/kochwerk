@@ -25,7 +25,7 @@ Im geöffneten Rezept kann jede Zutatenmenge direkt geändert werden. Die übrig
 
 ## Prüfung
 
-61 automatisierte fachliche und simulierte Offline-Tests bestanden; beide statischen Starthelfer auf Linux geprüft. Installation, interaktive Bedienung und tatsächlicher Offline-Neustart auf einem echten iPhone sind noch nicht praktisch bestätigt.
+67 automatisierte fachliche und simulierte Offline-Tests bestanden; beide statischen Starthelfer auf Linux geprüft. Installation, interaktive Bedienung und tatsächlicher Offline-Neustart auf einem echten iPhone sind noch nicht praktisch bestätigt.
 
 Aktueller Quellcode und Tests liegen in diesem Repository.
 
@@ -33,12 +33,12 @@ Aktueller Quellcode und Tests liegen in diesem Repository.
 
 Mit Node.js 22 oder neuer: `node --test tests/*.test.js`. Die Tests prüfen die Rechenregeln, den Wechsel der Bezugszutat, vorhandene Sicherungen und den Offline-Cache in einer simulierten Umgebung. Es werden keine zusätzlichen Pakete benötigt.
 
-## Kochmodus
+## Automatisches Bildschirm-Wachhalten
 
-Oben „Kochmodus starten“ wählen. Erst die Meldung „Bildschirm bleibt an, solange Kochwerk sichtbar ist“ bestätigt einen aktiven Screen Wake Lock. Der Modus bleibt beim Wechsel zwischen Rezepten aktiv und kann mit „Kochmodus beenden“ ausgeschaltet werden. Er gilt für die aktuelle App-Sitzung und startet nach vollständigem Schließen nicht automatisch.
+Kochwerk fordert beim Öffnen automatisch einen Screen Wake Lock an. Es gibt dafür keinen Schalter. Die Statusmeldung „Bildschirm bleibt an, solange Kochwerk sichtbar ist“ wird erst nach einer erfolgreichen Bestätigung durch das Gerät angezeigt.
 
-Beim Wechsel in den Hintergrund wird die Sperre freigegeben; beim Zurückkehren in die sichtbare App wird sie erneut angefordert, sofern der Kochmodus noch eingeschaltet ist. Beendet iOS das Wachhalten, erscheint ein Hinweis mit „Erneut aktivieren“. Auch fehlende Unterstützung oder eine Ablehnung werden angezeigt; es gibt keine versteckten Videos oder anderen Umgehungen.
+Im Hintergrund wird die Sperre freigegeben und beim Zurückkehren erneut angefordert. Wurde das Wachhalten vom System aufgehoben oder abgelehnt, erfolgt außerdem bei der nächsten normalen Bedienung ein neuer Versuch; wiederholte Eingaben werden auf höchstens einen solchen Versuch je zehn Sekunden begrenzt. Es gibt keine dauernde Abfrageschleife.
 
-Home-Bildschirm-Apps unterstützen Screen Wake Lock auf iOS/iPadOS seit 18.4. Stromsparmodus, niedriger Akkustand und Systemrichtlinien können eine Sperre verhindern oder beenden. Manuelles Sperren und ein App-Wechsel lassen sich damit nicht verhindern. Auf einem echten iPhone wurde das Verhalten noch nicht praktisch bestätigt. Nach dem Aktivieren die App mindestens über die eingestellte automatische Sperrzeit hinaus unberührt sichtbar lassen und anschließend das Ausschalten prüfen.
+Home-Bildschirm-Apps unterstützen Screen Wake Lock auf iOS/iPadOS seit 18.4. Stromsparmodus, niedriger Akkustand oder Systemrichtlinien können das Wachhalten verhindern oder beenden; dann erscheint ein Hinweis. Manuelles Sperren lässt sich nicht verhindern. Auf einem echten iPhone wurde das Verhalten noch nicht praktisch bestätigt.
 
 Referenzen: [WebKit: Safari 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/), [MDN: Screen Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API).

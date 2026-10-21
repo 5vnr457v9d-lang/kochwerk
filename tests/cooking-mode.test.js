@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createCookingMode} from '../cooking-mode.js';
+import {createCookingMode,createAutomaticCookingMode} from '../cooking-mode.js';
 
 class Sentinel extends EventTarget {
   released=false;releases=0;
@@ -83,3 +83,34 @@ test('Einschalten im Hintergrund wartet bis zur sichtbaren App',async()=>{
   const {mode,calls}=fixture({visible:false});await mode.enable();assert.equal(calls.length,0);assert.equal(mode.state.phase,'paused');
   await mode.setVisible(true);assert.equal(calls.length,1);assert.equal(mode.state.active,true);
 });
+test('Automatik fordert die Sperre beim Erstellen ohne Schalter an',async()=>{
+  const calls=[],lock=new Sentinel();
+  const mode=createAutomaticCookingMode({wakeLock:{request:async type=>{calls.push(type);return lock;}}});
+  await mode.ready;assert.deepEqual(calls,['screen']);assert.equal(mode.state.active,true);
+});
+test('Automatik pausiert im Hintergrund und fordert bei Rückkehr erneut an',async()=>{
+  const locks=[];const mode=createAutomaticCookingMode({wakeLock:{request:async()=>{const lock=new Sentinel();locks.push(lock);return lock;}}});
+  await mode.ready;await mode.setVisible(false);assert.equal(locks[0].released,true);
+  await mode.setVisible(true);assert.equal(locks.length,2);assert.equal(mode.state.active,true);
+});
+test('Eine versteckt gestartete Automatik wartet auf die sichtbare App',async()=>{
+  let calls=0;const mode=createAutomaticCookingMode({visible:false,wakeLock:{request:async()=>{calls++;return new Sentinel();}}});
+  await mode.ready;assert.equal(calls,0);await mode.setVisible(true);assert.equal(calls,1);
+});
+test('Normale Bedienung kann eine abgelehnte automatische Anfrage erneut versuchen',async()=>{
+  let calls=0;const mode=createAutomaticCookingMode({wakeLock:{request:async()=>{if(++calls===1)throw new Error('denied');return new Sentinel();}}});
+  await mode.ready;assert.equal(mode.state.active,false);await mode.retryAfterInteraction();assert.equal(mode.state.active,true);
+  await mode.retryAfterInteraction();assert.equal(calls,2);
+});
+test('Wiederholte Ablehnung führt bei vielen Eingaben zu keiner Anfrageschleife',async()=>{
+  let calls=0,time=0;const mode=createAutomaticCookingMode({now:()=>time,wakeLock:{request:async()=>{calls++;throw new Error('denied');}}});
+  await mode.ready;await mode.retryAfterInteraction();assert.equal(calls,2);
+  for(let n=0;n<20;n++)await mode.retryAfterInteraction();assert.equal(calls,2);
+  time=10000;await mode.retryAfterInteraction();assert.equal(calls,3);
+});
+test('Automatik bleibt bei fehlender Unterstützung ohne Anfragen bedienbar',async()=>{
+  const mode=createAutomaticCookingMode({wakeLock:undefined});await mode.ready;
+  await mode.retryAfterInteraction();await mode.setVisible(false);await mode.setVisible(true);
+  assert.equal(mode.state.phase,'unsupported');assert.equal(mode.state.active,false);
+});
+

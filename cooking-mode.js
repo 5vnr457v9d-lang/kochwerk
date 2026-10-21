@@ -9,8 +9,8 @@ export function createCookingMode({wakeLock,secure=true,visible=true,onChange=()
     requesting:'Bildschirm-Wachhalten wird angefragt …',
     active:'Bildschirm bleibt an, solange Kochwerk sichtbar ist.',
     paused:'Kochmodus pausiert, während Kochwerk im Hintergrund ist.',
-    released:'Das Gerät hat das Wachhalten beendet. Bitte erneut aktivieren.',
-    error:'Bildschirm-Wachhalten derzeit nicht aktiv. Erneut versuchen; ggf. Stromsparmodus prüfen.',
+    released:'Das Gerät hat das Wachhalten beendet. Automatischer neuer Versuch bei Rückkehr oder weiterer Bedienung.',
+    error:'Bildschirm-Wachhalten derzeit nicht aktiv; ggf. Stromsparmodus prüfen. Neuer Versuch bei Rückkehr oder weiterer Bedienung.',
     releaseError:'Wachhalten konnte nicht beendet werden. Bitte nochmals ausschalten.'
   };
   function snapshot(){return {supported,enabled,active:!!lock&&!lock.released&&visible,phase,message:messages[phase]};}
@@ -80,3 +80,24 @@ export function createCookingMode({wakeLock,secure=true,visible=true,onChange=()
     }
   };
 }
+
+/** Start on page load. Retry failures on ordinary interaction, at most once per 10 seconds. */
+export function createAutomaticCookingMode({now=()=>Date.now(),...options}={}) {
+  const controller=createCookingMode(options);
+  let lastInteractionAttempt=-Infinity;
+  const ready=controller.enable();
+  return {
+    get state(){return controller.state;},
+    ready,
+    setVisible:controller.setVisible,
+    retryAfterInteraction(){
+      const state=controller.state;
+      if(!state.enabled||state.active||!['error','released'].includes(state.phase))return Promise.resolve();
+      const timestamp=now();
+      if(timestamp-lastInteractionAttempt<10000)return Promise.resolve();
+      lastInteractionAttempt=timestamp;
+      return controller.retry();
+    }
+  };
+}
+
