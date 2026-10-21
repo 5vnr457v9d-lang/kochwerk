@@ -8,10 +8,10 @@ export function createCookingMode({wakeLock,secure=true,visible=true,onChange=()
     unsupported:'Bildschirm-Wachhalten wird in diesem Browser nicht unterstützt.',
     requesting:'Bildschirm-Wachhalten wird angefragt …',
     active:'Bildschirm bleibt an, solange Kochwerk sichtbar ist.',
-    paused:'Kochmodus pausiert, während Kochwerk im Hintergrund ist.',
-    released:'Das Gerät hat das Wachhalten beendet. Automatischer neuer Versuch bei Rückkehr oder weiterer Bedienung.',
-    error:'Bildschirm-Wachhalten derzeit nicht aktiv; ggf. Stromsparmodus prüfen. Neuer Versuch bei Rückkehr oder weiterer Bedienung.',
-    releaseError:'Wachhalten konnte nicht beendet werden. Bitte nochmals ausschalten.'
+    paused:'Bildschirm-Wachhalten pausiert.',
+    released:'Wachhalten beendet. Zum erneuten Versuch in die App tippen.',
+    error:'Wachhalten nicht aktiv. Zum erneuten Versuch in die App tippen.',
+    releaseError:'Wachhalten konnte nicht beendet werden.'
   };
   function snapshot(){return {supported,enabled,active:!!lock&&!lock.released&&visible,phase,message:messages[phase]};}
   function notify(){onChange(snapshot());}
@@ -81,46 +81,43 @@ export function createCookingMode({wakeLock,secure=true,visible=true,onChange=()
   };
 }
 
-/** Bounded retries cover pages that become fully active after their first request. */
-export function createAutomaticCookingMode({now=()=>Date.now(),schedule=setTimeout,cancel=clearTimeout,...options}={}) {
+/** One automatic request; user interaction and foreground return can retry it. */
+export function createAutomaticCookingMode({now=()=>Date.now(),...options}={}) {
   const controller=createCookingMode(options);
-  let visible=options.visible!==false;
-  let lastInteractionAttempt=-Infinity;
-  const timers=new Set();
-  function clearRetries(){for(const timer of timers)cancel(timer);timers.clear();}
-  function retryIfNeeded(){
-    const state=controller.state;
-    return visible&&state.enabled&&!state.active&&['error','released'].includes(state.phase)
-      ?controller.retry():Promise.resolve();
-  }
-  function scheduleRetries(){
-    clearRetries();
-    if(!visible||!controller.state.supported)return;
-    for(const delay of [300,1200,3000]){
-      const timer=schedule(()=>{timers.delete(timer);return retryIfNeeded();},delay);
-      timers.add(timer);
-    }
-  }
+  let visible=options.visible!==false,lastInteractionAttempt=-Infinity;
   const ready=controller.enable();
-  scheduleRetries();
   return {
     get state(){return controller.state;},
     ready,
-    setVisible(value){
-      visible=!!value;
-      const task=controller.setVisible(visible);
-      scheduleRetries();
-      return task;
-    },
-    // load/focus can happen after the initial request, without any user input.
-    refresh(){scheduleRetries();return retryIfNeeded();},
+    setVisible(value){visible=!!value;return controller.setVisible(visible);},
     retryAfterInteraction(){
       const state=controller.state;
       if(!visible||!state.enabled||state.active||!['error','released'].includes(state.phase))return Promise.resolve();
       const timestamp=now();
-      if(timestamp-lastInteractionAttempt<10000)return Promise.resolve();
+      if(timestamp-lastInteractionAttempt<1000)return Promise.resolve();
       lastInteractionAttempt=timestamp;
       return controller.retry();
     }
+  };
+}
+
+/** Connect real page lifecycle and completed taps. Call start after the initial render. */
+export function connectCookingMode(mode,{document,window,afterPaint=callback=>window.requestAnimationFrame(()=>window.requestAnimationFrame(callback))}) {
+  let started=false;
+  const isVisible=()=>document.visibilityState==='visible';
+  function sync(){if(started)void mode.setVisible(isVisible());}
+  function interact(){
+    if(!isVisible())return;
+    // Stay in the input event's activation context: no timers or awaited work here.
+    if(!started){started=true;void mode.setVisible(true);}
+    else void mode.retryAfterInteraction();
+  }
+  document.addEventListener('visibilitychange',sync);
+  window.addEventListener('pageshow',sync);
+  window.addEventListener('pagehide',()=>{if(started)void mode.setVisible(false);});
+  document.addEventListener('click',interact,{capture:true,passive:true});
+  document.addEventListener('keydown',interact,{capture:true});
+  return {
+    start(){afterPaint(()=>{if(started)return;started=true;sync();});}
   };
 }

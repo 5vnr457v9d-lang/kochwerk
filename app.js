@@ -2,7 +2,7 @@ import {uid,emptyData,numberInput,formatAmount,decimalString,validateRecipe,vali
 import {readData,writeData} from './storage.js';
 import {demoData} from './demo.js';
 import {icon,cover,recipeArt} from './art.js';
-import {createAutomaticCookingMode} from './cooking-mode.js';
+import {createAutomaticCookingMode,connectCookingMode} from './cooking-mode.js';
 
 const $=(q,root=document)=>root.querySelector(q);
 const $$=(q,root=document)=>[...root.querySelectorAll(q)];
@@ -12,10 +12,11 @@ const editableAmount=n=>n>0&&n<.001?decimalString(n).replace('.',','):new Intl.N
 const main=$('#main'),modal=$('#modal');
 let data=emptyData(),ready=false,busy=false,query='',bookFilter='',sort='recent',toastTimer,routeReturn='#recipes',editorPhoto='',photoLoading=false,installPrompt;
 const channel='BroadcastChannel' in window?new BroadcastChannel('kochwerk-changes'):null;
-const cookingMode=createAutomaticCookingMode({wakeLock:navigator.wakeLock,secure:isSecureContext,visible:document.visibilityState==='visible',onChange:renderCookingMode});
+const cookingMode=createAutomaticCookingMode({wakeLock:navigator.wakeLock,secure:isSecureContext,visible:false,onChange:renderCookingMode});
+const cookingLifecycle=connectCookingMode(cookingMode,{document,window});
 function renderCookingMode(state=cookingMode.state){
   const status=$('#cook-status');if(!status)return;
-  status.textContent=state.message;
+  if(status.textContent!==state.message)status.textContent=state.message;
   status.classList.toggle('cook-mode-error',['error','released','releaseError'].includes(state.phase));
 }
 function toast(text){clearTimeout(toastTimer);$('#toast').textContent=text;$('#toast').classList.add('visible');toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),4500);}
@@ -104,7 +105,7 @@ function resetScale(r){
 function renderSettings(){
   main.innerHTML=hero('Dein Kochbuch.<br><em>In deiner Hand.</em>','Alle Rezepte und Bilder bleiben auf diesem Gerät. Mit einer Sicherung kannst du sie auf ein anderes Gerät mitnehmen.','')
     +`<section class="panel"><h2>Sichern & mitnehmen</h2><p>Exportiere regelmäßig eine Sicherungsdatei. Sie enthält alle Rezepte, Bilder und Kochbücher. Beim Import werden Rezepte als neue Einträge ergänzt; vorhandene Rezepte bleiben erhalten. Kochbücher mit gleichem Namen werden zusammengeführt.</p>${button('Sicherung exportieren','export','download','primary')}${button('Sicherung importieren','import','upload')}<input id="import-file" type="file" accept=".json,application/json" hidden><p class="muted">${data.recipes.length} Rezepte · ${data.books.length} Kochbücher · Sicherungsformat Version 1</p><p class="muted" id="last-backup"></p><p class="form-error" role="alert"></p></section>
-    <section class="panel"><h2>Auf den Home-Bildschirm</h2><p>iPhone: Kochwerk in Safari über eine HTTPS-Adresse öffnen, im Teilen-Menü „Zum Home-Bildschirm“ wählen und „Als Web-App öffnen“ aktivieren. Danach Kochwerk über das neue Symbol starten und warten, bis „Offline bereit“ angezeigt wird.</p><p id="offline-details" class="muted"></p>${installPrompt?button('App installieren','install','plus','primary'):''}${button('Offline-Status prüfen','check-offline','check')}</section>
+    <section class="panel"><h2>Auf den Home-Bildschirm</h2><p class="muted">Kochwerk · Version 1.2.3</p><p>iPhone: Kochwerk in Safari über eine HTTPS-Adresse öffnen, im Teilen-Menü „Zum Home-Bildschirm“ wählen und „Als Web-App öffnen“ aktivieren. Danach Kochwerk über das neue Symbol starten und warten, bis „Offline bereit“ angezeigt wird.</p><p id="offline-details" class="muted"></p>${installPrompt?button('App installieren','install','plus','primary'):''}${button('Offline-Status prüfen','check-offline','check')}</section>
     <section class="panel"><h2>Lokaler Speicher</h2><p>Es gibt kein Benutzerkonto, keine Synchronisierung und keine Übertragung deiner Rezepte an einen Server. Browserdaten sind an diese Adresse und den verwendeten Browser gebunden. Ein anderer Port zählt ebenfalls als andere Adresse.</p><p>Das Löschen von Websitedaten oder das Entfernen der App kann Daten löschen. Auch das Betriebssystem kann lokalen Speicher freigeben. Eine exportierte Sicherung schützt vor Datenverlust.</p>${button('Dauerhaften Speicher anfragen','persist','check')}<p id="storage-status" class="muted"></p></section>
     <section class="panel"><h2>Einfach ausprobieren</h2><p>Vier bearbeitbare Beispielrezepte für Brot, Kuchen und die Alltagsküche. Geh- und Backzeiten sind Richtwerte.</p>${button('Beispielrezepte ergänzen','load-demo','book')}</section>`;
   try{$('#last-backup').textContent=localStorage.getItem('kochwerk-last-export')?'Zuletzt exportiert: '+new Date(localStorage.getItem('kochwerk-last-export')).toLocaleString('de-DE'): 'Noch keine Sicherung exportiert.';}catch{}
@@ -177,7 +178,7 @@ async function updateOfflineStatus(){
   let status,offlineReady=false;
   if(!isSecureContext)status='HTTPS oder localhost für Offline-Betrieb erforderlich.';
   else if(!('serviceWorker' in navigator))status='Dieser Browser unterstützt den Offline-Speicher nicht.';
-  else{try{const reg=await navigator.serviceWorker.getRegistration();const cache=await caches.open('kochwerk-shell-v7');const complete=!!(await cache.match(new URL('./app.js',location.href)));offlineReady=!!(reg?.active&&complete);status=offlineReady?'Offline bereit · App-Dateien auf diesem Gerät gespeichert.':'Offline-Speicher noch nicht bereit. Bitte die App online neu öffnen.';}catch{status='Offline-Speicher konnte nicht geprüft werden.';}}
+  else{try{const reg=await navigator.serviceWorker.getRegistration();const cache=await caches.open('kochwerk-shell-v8');const complete=!!(await cache.match(new URL('./app.js',location.href)));offlineReady=!!(reg?.active&&complete);status=offlineReady?'Offline bereit · App-Dateien auf diesem Gerät gespeichert.':'Offline-Speicher noch nicht bereit. Bitte die App online neu öffnen.';}catch{status='Offline-Speicher konnte nicht geprüft werden.';}}
   $('#offline-state').textContent=status;
   $('.device-label').textContent=offlineReady?'● Offline bereit':'● Offline-Status: Daten & App';
   $('.device-label').title=status;
@@ -221,18 +222,12 @@ document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#recipe
 channel?.addEventListener('message',async()=>{if(modal.open){toast('Anderes Fenster hat Daten geändert. Bitte vor weiteren Änderungen neu laden.');return;}try{data=await readData();updateSidebar();render();toast('Änderungen aus anderem Fenster übernommen.');}catch(e){error(e);}});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;if(ready&&route().page==='settings')render();});
 window.addEventListener('beforeunload',e=>{if(modal.open&&$('#edit-form',modal)){e.preventDefault();e.returnValue='';}});
-document.addEventListener('visibilitychange',()=>{void cookingMode.setVisible(document.visibilityState==='visible');});
-window.addEventListener('pagehide',()=>{void cookingMode.setVisible(false);});
-window.addEventListener('pageshow',()=>{void cookingMode.setVisible(document.visibilityState==='visible');});
-window.addEventListener('load',()=>{void cookingMode.refresh();});
-window.addEventListener('focus',()=>{void cookingMode.setVisible(document.visibilityState==='visible');});
-document.addEventListener('pointerdown',()=>{void cookingMode.retryAfterInteraction();},{passive:true});
-document.addEventListener('keydown',()=>{void cookingMode.retryAfterInteraction();});
 async function start(){
   renderCookingMode();
   $$('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
   if(location.protocol==='file:'){main.innerHTML='<div class="error-banner"><strong>Bitte über localhost oder HTTPS öffnen.</strong><p>Ein Doppelklick auf index.html unterstützt weder die App-Module noch den Offline-Speicher zuverlässig. Verwende Start-Windows.cmd oder die beiliegende Anleitung.</p></div>';return;}
   try{data=await readData();ready=true;updateSidebar();render();}catch(e){main.innerHTML=`<div class="error-banner"><strong>Kochbuch konnte nicht geöffnet werden.</strong><p>${escape(e.message)}</p><p>Bitte normalen Browsermodus verwenden und lokalen Speicher erlauben. Vorhandene Daten werden nicht überschrieben.</p><button class="button" id="reload">Erneut versuchen</button></div>`;$('#reload').onclick=()=>location.reload();}
+  cookingLifecycle.start();
   if(isSecureContext&&'serviceWorker' in navigator){try{const reg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});reg.addEventListener('updatefound',()=>{const worker=reg.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'){updateOfflineStatus();if(navigator.serviceWorker.controller)toast('App-Update bereit. Alle Kochwerk-Fenster schließen und erneut öffnen.');}});});navigator.serviceWorker.addEventListener('controllerchange',updateOfflineStatus);}catch{toast('Offline-Speicher konnte nicht eingerichtet werden.');}}
   await updateOfflineStatus();
 }

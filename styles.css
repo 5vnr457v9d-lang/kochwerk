@@ -16,6 +16,6 @@
 
 
 
-/* Automatic screen wake lock status on every view. */
-.topbar{height:auto;min-height:79px;flex-wrap:wrap;gap:8px 14px;padding-top:12px;padding-bottom:10px}.cook-mode-status{display:flex;align-items:center;justify-content:flex-end;width:100%;color:#67775e;font-size:10px;line-height:1.6}.cook-mode-error{color:#a13d2f}
-@media(max-width:760px){.topbar{min-height:62px;gap:7px}.cook-mode-status{justify-content:flex-start;font-size:10px}}
+/* Reserve both header rows so wake-lock and offline messages cannot move the page. */
+.topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:20px 32px;height:auto;min-height:0;gap:8px 14px;padding-top:12px;padding-bottom:10px}.breadcrumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.device-label{white-space:nowrap}.cook-mode-status{grid-column:1/-1;display:flex;align-items:center;justify-content:flex-end;height:32px;color:#67775e;font-size:10px;line-height:16px}.cook-mode-error{color:#a13d2f}
+@media(max-width:760px){.topbar{gap:7px 10px}.device-label{max-width:140px;overflow:hidden;text-overflow:ellipsis}.cook-mode-status{justify-content:flex-start}}

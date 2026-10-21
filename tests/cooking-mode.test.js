@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createCookingMode,createAutomaticCookingMode} from '../cooking-mode.js';
+import {createCookingMode,createAutomaticCookingMode,connectCookingMode} from '../cooking-mode.js';
 
 class Sentinel extends EventTarget {
   released=false;releases=0;
@@ -12,7 +12,7 @@ function fixture(options={}){
   const mode=createCookingMode({wakeLock,onChange:s=>states.push(s),...options});
   return {mode,calls,states,locks};
 }
-function automatic(options){return createAutomaticCookingMode({schedule:()=>0,cancel:()=>{},...options});}
+function automatic(options){return createAutomaticCookingMode(options);}
 function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};}
 
 test('Wachhalten wird nur nach dem Einschalten angefordert und danach wieder beendet',async()=>{
@@ -107,61 +107,55 @@ test('Wiederholte Ablehnung führt bei vielen Eingaben zu keiner Anfrageschleife
   let calls=0,time=0;const mode=automatic({now:()=>time,wakeLock:{request:async()=>{calls++;throw new Error('denied');}}});
   await mode.ready;await mode.retryAfterInteraction();assert.equal(calls,2);
   for(let n=0;n<20;n++)await mode.retryAfterInteraction();assert.equal(calls,2);
-  time=10000;await mode.retryAfterInteraction();assert.equal(calls,3);
+  time=1000;await mode.retryAfterInteraction();assert.equal(calls,3);
 });
 test('Automatik bleibt bei fehlender Unterstützung ohne Anfragen bedienbar',async()=>{
   const mode=automatic({wakeLock:undefined});await mode.ready;
   await mode.retryAfterInteraction();await mode.setVisible(false);await mode.setVisible(true);
   assert.equal(mode.state.phase,'unsupported');assert.equal(mode.state.active,false);
 });
-
-function clock(){
-  let time=0,id=0;const tasks=new Map();
-  return {
-    schedule(fn,delay){const key=++id;tasks.set(key,{fn,at:time+delay});return key;},
-    cancel(key){tasks.delete(key);},
-    get size(){return tasks.size;},
-    async advance(delta){const end=time+delta;while(true){const next=[...tasks].filter(([,v])=>v.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!next)break;time=next[1].at;tasks.delete(next[0]);await next[1].fn();}time=end;}
-  };
+function connected(options={}){
+  const document=new EventTarget(),window=new EventTarget(),frames=[],locks=[];let calls=0;
+  document.visibilityState='visible';
+  const wakeLock=options.wakeLock??{request:async()=>{calls++;const lock=new Sentinel();locks.push(lock);return lock;}};
+  const mode=automatic({visible:false,wakeLock,...options});
+  const lifecycle=connectCookingMode(mode,{document,window,afterPaint:callback=>frames.push(callback)});
+  const settle=async()=>{for(let n=0;n<8;n++)await Promise.resolve();};
+  return {mode,document,window,locks,frames,lifecycle,settle,get calls(){return calls;}};
 }
-function timedMode(options={}){
-  const timer=clock();let requests=0;
-  const mode=createAutomaticCookingMode({schedule:timer.schedule,cancel:timer.cancel,wakeLock:{request:async()=>{requests++;throw new Error('not fully active');}},...options});
-  return {mode,timer,get requests(){return requests;}};
-}
-test('Startfehler wird ohne Bedienung automatisch erneut versucht',async()=>{
-  let calls=0;const {mode,timer}=timedMode({wakeLock:{request:async()=>{if(++calls<3)throw new Error('not ready');return new Sentinel();}}});
-  await mode.ready;assert.equal(mode.state.phase,'error');await timer.advance(1200);
-  assert.equal(calls,3);assert.equal(mode.state.active,true);await timer.advance(5000);assert.equal(calls,3);
+test('App-Start wartet auf die erste Darstellung und fordert genau einmal an',async()=>{
+  const f=connected();await f.mode.ready;f.lifecycle.start();assert.equal(f.calls,0);
+  f.window.dispatchEvent(new Event('pageshow'));f.window.dispatchEvent(new Event('focus'));assert.equal(f.calls,0);
+  f.frames.shift()();await f.settle();assert.equal(f.calls,1);assert.equal(f.mode.state.active,true);
+  for(let n=0;n<10;n++)f.window.dispatchEvent(new Event('focus'));
+  assert.equal(f.calls,1);
 });
-test('Dauerhafte Ablehnung beendet die Startversuche nach drei Wiederholungen',async()=>{
-  const f=timedMode();await f.mode.ready;await f.timer.advance(100000);
-  assert.equal(f.requests,4);assert.equal(f.timer.size,0);assert.equal(f.mode.state.active,false);
+test('Touchanfang verbraucht keinen Versuch; abgeschlossener Tap fordert im Aktivierungskontext an',async()=>{
+  let activated=false,calls=0;
+  const f=connected({wakeLock:{request:async()=>{calls++;if(!activated)throw new Error('NotAllowedError');return new Sentinel();}}});
+  f.lifecycle.start();f.frames.shift()();await f.settle();assert.equal(calls,1);assert.equal(f.mode.state.phase,'error');
+  f.document.dispatchEvent(new Event('pointerdown'));await f.settle();assert.equal(calls,1);
+  activated=true;f.document.dispatchEvent(new Event('click'));activated=false;
+  assert.equal(calls,2);await f.settle();assert.equal(f.mode.state.active,true);
 });
-test('Hintergrund beendet ausstehende Startversuche; Rückkehr startet neue',async()=>{
-  const f=timedMode();await f.mode.ready;await f.mode.setVisible(false);assert.equal(f.timer.size,0);
-  await f.timer.advance(5000);assert.equal(f.requests,1);await f.mode.setVisible(true);await f.timer.advance(300);
-  assert.equal(f.requests,3);
+test('Früher Tap vor dem ersten Bild startet direkt und wird nicht vom Startcallback dupliziert',async()=>{
+  const f=connected();f.lifecycle.start();f.document.dispatchEvent(new Event('click'));
+  assert.equal(f.calls,1);f.frames.shift()();await f.settle();assert.equal(f.calls,1);assert.equal(f.mode.state.active,true);
 });
-test('Versteckter Start plant keine Anfragen oder Wiederholungen',async()=>{
-  const f=timedMode({visible:false});await f.mode.ready;await f.timer.advance(5000);
-  assert.equal(f.requests,0);assert.equal(f.timer.size,0);
+test('Im Hintergrund bleibt die erste Darstellung ohne Sperre; Rückkehr fordert einmal an',async()=>{
+  const f=connected();f.lifecycle.start();f.document.visibilityState='hidden';f.frames.shift()();await f.settle();assert.equal(f.calls,0);
+  f.document.visibilityState='visible';f.document.dispatchEvent(new Event('visibilitychange'));await f.settle();assert.equal(f.calls,1);
+  f.document.visibilityState='hidden';f.document.dispatchEvent(new Event('visibilitychange'));await f.settle();assert.equal(f.locks[0].released,true);
+  f.document.visibilityState='visible';f.window.dispatchEvent(new Event('pageshow'));await f.settle();assert.equal(f.calls,2);
 });
-test('Spätes Laden startet begrenzte Versuche neu ohne Timer zu vervielfachen',async()=>{
-  const f=timedMode();await f.mode.ready;await f.timer.advance(5000);
-  await f.mode.refresh();await f.mode.refresh();assert.equal(f.timer.size,3);
-  await f.timer.advance(5000);assert.equal(f.timer.size,0);assert.equal(f.requests,9);
+test('Seitenwechsel innerhalb der App behält die aktive Sperre',async()=>{
+  const f=connected();f.lifecycle.start();f.frames.shift()();await f.settle();
+  for(let n=0;n<20;n++)f.document.dispatchEvent(new Event('click'));
+  f.window.dispatchEvent(new Event('pageshow'));await f.settle();assert.equal(f.calls,1);assert.equal(f.locks[0].released,false);
 });
-test('Langsame Anfrage wird durch Starttimer nicht parallel erneut angefordert',async()=>{
-  const pending=deferred();let calls=0;
-  const {mode,timer}=timedMode({wakeLock:{request:()=>{calls++;return pending.promise;}}});
-  await timer.advance(5000);assert.equal(calls,1);pending.resolve(new Sentinel());await mode.ready;assert.equal(mode.state.active,true);
-});
-test('Während des Starts freigegebene Sperre wird ohne Bedienung erneut angefordert',async()=>{
-  const locks=[];const {mode,timer}=timedMode({wakeLock:{request:async()=>{const lock=new Sentinel();locks.push(lock);return lock;}}});
-  await mode.ready;await locks[0].release();await timer.advance(300);
-  assert.equal(mode.state.active,true);assert.equal(locks.length,2);
-});
-test('Fehlende API plant keine Starttimer',async()=>{
-  const f=timedMode({wakeLock:undefined});await f.mode.ready;assert.equal(f.timer.size,0);await f.mode.refresh();assert.equal(f.timer.size,0);
+test('Zweiter Tap nach kurzer Pause kann eine abgelehnte Bedienung erneut versuchen',async()=>{
+  let calls=0,time=0;const f=connected({now:()=>time,wakeLock:{request:async()=>{if(++calls<3)throw new Error('denied');return new Sentinel();}}});
+  f.document.dispatchEvent(new Event('click'));await f.settle();assert.equal(calls,1);
+  f.document.dispatchEvent(new Event('click'));await f.settle();assert.equal(calls,2);
+  time=1000;f.document.dispatchEvent(new Event('click'));await f.settle();assert.equal(calls,3);assert.equal(f.mode.state.active,true);
 });

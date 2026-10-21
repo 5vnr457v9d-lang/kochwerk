@@ -25,7 +25,7 @@ Im geöffneten Rezept kann jede Zutatenmenge direkt geändert werden. Die übrig
 
 ## Prüfung
 
-75 automatisierte fachliche und simulierte Offline-Tests bestanden; beide statischen Starthelfer auf Linux geprüft. Die Tests simulieren Wake-Lock- und Offline-Lebenszyklen. Ein automatisierter Test auf echten iPhones oder Android-Geräten wurde nicht durchgeführt.
+73 automatisierte fachliche und simulierte Offline-Tests bestanden; beide statischen Starthelfer auf Linux geprüft. Die Tests simulieren Wake-Lock- und Offline-Lebenszyklen. Ein automatisierter Test auf echten iPhones oder Android-Geräten wurde nicht durchgeführt.
 
 Aktueller Quellcode und Tests liegen in diesem Repository.
 
@@ -37,9 +37,13 @@ Mit Node.js 22 oder neuer: `node --test tests/*.test.js`. Die Tests prüfen die 
 
 Kochwerk fordert beim Öffnen automatisch einen Screen Wake Lock an. Es gibt dafür keinen Schalter. Die Statusmeldung „Bildschirm bleibt an, solange Kochwerk sichtbar ist“ wird erst nach einer erfolgreichen Bestätigung durch das Gerät angezeigt.
 
-Beim Start, nach dem Laden sowie bei der Rückkehr in die App wird das Wachhalten erneut geprüft. Nach einer frühen Ablehnung folgen ohne Bedienung bis zu drei weitere Versuche nach 0,3, 1,2 und 3 Sekunden. Bereits aktives Wachhalten oder eine laufende Anfrage erzeugen keine zusätzliche Anfrage. Im Hintergrund werden geplante Versuche abgebrochen und die Sperre freigegeben; beim Zurückkehren wird sie neu angefordert. Wurde das Wachhalten vom System aufgehoben oder abgelehnt, erfolgt außerdem bei der nächsten normalen Bedienung ein neuer Versuch; wiederholte Eingaben werden auf höchstens einen solchen Versuch je zehn Sekunden begrenzt. Es gibt keine dauernde Abfrageschleife.
+Die erste Anfrage erfolgt nach dem Laden der lokalen Daten und der ersten Darstellung. Die zusätzlichen Start-Timer aus Version 1.2.2 sowie der Focus-Handler wurden entfernt. Im Hintergrund wird die Sperre freigegeben; beim Zurückkehren wird sie erneut angefordert. Wird die automatische Anfrage abgelehnt, kann ein normaler Tap in die App einen neuen Versuch auslösen. Dieser Versuch erfolgt synchron im abgeschlossenen Klick-Ereignis, nicht beim ersten Touchkontakt (`pointerdown`). Wiederholte Eingaben werden auf einen Versuch pro Sekunde begrenzt. Es gibt keine zeitgesteuerte Wiederholungsschleife und keinen zusätzlichen Schalter.
 
-Home-Bildschirm-Apps unterstützen Screen Wake Lock auf iOS/iPadOS seit 18.4. Stromsparmodus, niedriger Akkustand oder Systemrichtlinien können das Wachhalten verhindern oder beenden; dann erscheint ein Hinweis. Manuelles Sperren lässt sich nicht verhindern. Der Nutzer hat das Wachhalten auf dem iPhone nach Bedienung bestätigt; der korrigierte Start ohne Bedienung muss dort noch praktisch überprüft werden.
+Die Kopfzeile reserviert feste Zeilen für Offline- und Wachhalten-Status. Dadurch ändern unterschiedliche Statusmeldungen nicht mehr die Position des Inhalts. Unter „Daten & App“ wird die installierte Quellcode-Version angezeigt.
+
+Die Tests prüfen insbesondere die Reihenfolge Erstaufbau → Anfrage, Touchanfang → abgeschlossener Tap, einen Tap vor dem ersten Bild sowie Hintergrund/Rückkehr. Eine Browser- oder iPhone-Messung des Ruckelns konnte in dieser Umgebung nicht durchgeführt werden.
+
+Home-Bildschirm-Apps unterstützen Screen Wake Lock auf iOS/iPadOS seit 18.4. Stromsparmodus, niedriger Akkustand oder Systemrichtlinien können das Wachhalten verhindern oder beenden; dann erscheint ein Hinweis. Manuelles Sperren lässt sich nicht verhindern. Der Nutzer hat das Wachhalten auf dem iPhone nach Bedienung bestätigt; Version 1.2.2 wurde anschließend als Regression mit ausbleibendem Wachhalten und Ruckeln gemeldet. Die Korrektur in 1.2.3 muss auf dem iPhone noch praktisch überprüft werden.
 
 Referenzen: [WebKit: Safari 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/), [MDN: Screen Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API).
 
