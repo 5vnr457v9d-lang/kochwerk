@@ -2,6 +2,7 @@ import {uid,emptyData,numberInput,formatAmount,decimalString,validateRecipe,vali
 import {readData,writeData} from './storage.js';
 import {demoData} from './demo.js';
 import {icon,cover,recipeArt} from './art.js';
+import {createCookingMode} from './cooking-mode.js';
 
 const $=(q,root=document)=>root.querySelector(q);
 const $$=(q,root=document)=>[...root.querySelectorAll(q)];
@@ -11,6 +12,18 @@ const editableAmount=n=>n>0&&n<.001?decimalString(n).replace('.',','):new Intl.N
 const main=$('#main'),modal=$('#modal');
 let data=emptyData(),ready=false,busy=false,query='',bookFilter='',sort='recent',toastTimer,routeReturn='#recipes',editorPhoto='',photoLoading=false,installPrompt;
 const channel='BroadcastChannel' in window?new BroadcastChannel('kochwerk-changes'):null;
+const cookingMode=createCookingMode({wakeLock:navigator.wakeLock,secure:isSecureContext,visible:document.visibilityState==='visible',onChange:renderCookingMode});
+function renderCookingMode(state=cookingMode.state){
+  const toggle=$('#cook-toggle');if(!toggle)return;
+  const on=state.enabled||state.active;
+  toggle.textContent=on?'Kochmodus beenden':'Kochmodus starten';
+  toggle.setAttribute('aria-pressed',String(on));
+  toggle.setAttribute('aria-busy',String(state.phase==='requesting'));
+  toggle.classList.toggle('primary',state.active);toggle.disabled=!state.supported;
+  $('#cook-status').textContent=state.message;
+  $('#cook-status').classList.toggle('cook-mode-error',['error','released','releaseError'].includes(state.phase));
+  $('#cook-retry').hidden=!(state.enabled&&!state.active&&['error','released'].includes(state.phase));
+}
 function toast(text){clearTimeout(toastTimer);$('#toast').textContent=text;$('#toast').classList.add('visible');toastTimer=setTimeout(()=>$('#toast').classList.remove('visible'),4500);}
 function error(e,root=modal.open?modal:main){let el=$('.form-error',root);if(!el){el=document.createElement('p');el.className='form-error';el.setAttribute('role','alert');root.prepend(el);}el.textContent=e.message??String(e);el.scrollIntoView({block:'nearest'});}
 function button(text,action,name='',extra=''){return `<button type="button" class="button ${extra}" data-action="${action}">${name?icon(name):''}${text}</button>`;}
@@ -170,13 +183,15 @@ async function updateOfflineStatus(){
   let status,offlineReady=false;
   if(!isSecureContext)status='HTTPS oder localhost für Offline-Betrieb erforderlich.';
   else if(!('serviceWorker' in navigator))status='Dieser Browser unterstützt den Offline-Speicher nicht.';
-  else{try{const reg=await navigator.serviceWorker.getRegistration();const cache=await caches.open('kochwerk-shell-v4');const complete=!!(await cache.match(new URL('./app.js',location.href)));offlineReady=!!(reg?.active&&complete);status=offlineReady?'Offline bereit · App-Dateien auf diesem Gerät gespeichert.':'Offline-Speicher noch nicht bereit. Bitte die App online neu öffnen.';}catch{status='Offline-Speicher konnte nicht geprüft werden.';}}
+  else{try{const reg=await navigator.serviceWorker.getRegistration();const cache=await caches.open('kochwerk-shell-v5');const complete=!!(await cache.match(new URL('./app.js',location.href)));offlineReady=!!(reg?.active&&complete);status=offlineReady?'Offline bereit · App-Dateien auf diesem Gerät gespeichert.':'Offline-Speicher noch nicht bereit. Bitte die App online neu öffnen.';}catch{status='Offline-Speicher konnte nicht geprüft werden.';}}
   $('#offline-state').textContent=status;
   $('.device-label').textContent=offlineReady?'● Offline bereit':'● Offline-Status: Daten & App';
   $('.device-label').title=status;
   if($('#offline-details'))$('#offline-details').textContent=status;
 }
 async function handleAction(action,el){
+  if(action==='cook-toggle'){if(cookingMode.state.enabled||cookingMode.state.active)await cookingMode.disable();else await cookingMode.enable();return;}
+  if(action==='cook-retry'){await cookingMode.retry();return;}
   const {page,id}=route(),r=data.recipes.find(r=>r.id===id);
   if(action==='close-modal'){if(photoLoading){toast('Bild wird noch verarbeitet.');return;}if($('#edit-form',modal)){confirmDiscard();}else modal.close();return;}
   if(action==='new-recipe'){openRecipeEditor();return;}
@@ -214,7 +229,11 @@ document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#recipe
 channel?.addEventListener('message',async()=>{if(modal.open){toast('Anderes Fenster hat Daten geändert. Bitte vor weiteren Änderungen neu laden.');return;}try{data=await readData();updateSidebar();render();toast('Änderungen aus anderem Fenster übernommen.');}catch(e){error(e);}});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;if(ready&&route().page==='settings')render();});
 window.addEventListener('beforeunload',e=>{if(modal.open&&$('#edit-form',modal)){e.preventDefault();e.returnValue='';}});
+document.addEventListener('visibilitychange',()=>{void cookingMode.setVisible(document.visibilityState==='visible');});
+window.addEventListener('pagehide',()=>{void cookingMode.setVisible(false);});
+window.addEventListener('pageshow',()=>{void cookingMode.setVisible(document.visibilityState==='visible');});
 async function start(){
+  renderCookingMode();
   $$('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
   if(location.protocol==='file:'){main.innerHTML='<div class="error-banner"><strong>Bitte über localhost oder HTTPS öffnen.</strong><p>Ein Doppelklick auf index.html unterstützt weder die App-Module noch den Offline-Speicher zuverlässig. Verwende Start-Windows.cmd oder die beiliegende Anleitung.</p></div>';return;}
   try{data=await readData();ready=true;updateSidebar();render();}catch(e){main.innerHTML=`<div class="error-banner"><strong>Kochbuch konnte nicht geöffnet werden.</strong><p>${escape(e.message)}</p><p>Bitte normalen Browsermodus verwenden und lokalen Speicher erlauben. Vorhandene Daten werden nicht überschrieben.</p><button class="button" id="reload">Erneut versuchen</button></div>`;$('#reload').onclick=()=>location.reload();}
@@ -222,4 +241,5 @@ async function start(){
   await updateOfflineStatus();
 }
 start();
+
 

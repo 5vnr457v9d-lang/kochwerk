@@ -15,7 +15,7 @@ function harness(){
 }
 async function lifecycle(fn){let pending;fn({waitUntil:p=>pending=p});await pending;}
 test('Offline-Paket enthält alle Dateien und kann vollständig vorab geladen werden',async()=>{
-  const h=harness();await lifecycle(h.handlers.install);assert.equal(h.requests.length,12);
+  const h=harness();await lifecycle(h.handlers.install);assert.equal(h.requests.length,13);
   for(const url of h.requests){const relative=new URL(url).pathname.replace('/kochwerk/','')||'index.html';assert.ok((await stat(new URL(relative,root))).size>0);}
 });
 test('Aktivierung löscht ausschließlich alte Kochwerk-App-Caches',async()=>{
@@ -23,7 +23,7 @@ test('Aktivierung löscht ausschließlich alte Kochwerk-App-Caches',async()=>{
 });
 test('Offline-Navigation und Module kommen aus dem Cache, ohne Netzwerkzugriff',async()=>{
   const h=harness();await lifecycle(h.handlers.install);
-  for(const [url,mode] of [['https://test.invalid/kochwerk/','navigate'],['https://test.invalid/kochwerk/app.js','cors']]){
+  for(const [url,mode] of [['https://test.invalid/kochwerk/','navigate'],['https://test.invalid/kochwerk/app.js','cors'],['https://test.invalid/kochwerk/cooking-mode.js','cors']]){
     let response;h.handlers.fetch({request:{url,method:'GET',mode},respondWith:r=>response=r});assert.ok(await response);
   }assert.equal(h.fetches,0);
 });
@@ -32,7 +32,7 @@ test('Externe URLs, fremde Pfade und Schreibzugriffe werden nicht abgefangen',()
 });
 test('HTML, CSS und JavaScript enthalten keine externen Runtime-Abhängigkeiten',async()=>{
   const html=await readFile(new URL('index.html',root),'utf8');assert.doesNotMatch(html,/(?:src|href)=["']https?:/);
-  for(const file of ['styles.css','app.js','domain.js','storage.js','demo.js','art.js']){
+  for(const file of ['styles.css','app.js','domain.js','storage.js','demo.js','art.js','cooking-mode.js']){
     const source=await readFile(new URL(file,root),'utf8');assert.doesNotMatch(source,/from\s+['"]https?:|url\(['"]?https?:|fetch\(['"]https?:/);
   }
 });

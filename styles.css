@@ -14,3 +14,8 @@
 @media(max-width:360px){.ingredients-editor-header,.ingredient-row{grid-template-columns:minmax(60px,1fr) 57px 45px 28px}.ingredient input.ingredient-amount{width:80px}}
 @media print{body{background:#fff;color:#000}.sidebar,.topbar,.page-footer,.back,.detail-actions,.toast,.hero,.note-strip,.no-print{display:none!important}.workspace{margin:0;padding:0}main{padding:0;min-height:0}.detail-layout{grid-template-columns:1fr 1.3fr;gap:25px}.ingredients-panel{background:#fff;border:1px solid #aaa}.ingredient input,.steps input,.ingredient-unit{display:none!important}.ingredient:has(input:checked) label,.steps label:has(input:checked){text-decoration:none;opacity:1;color:#000}.scale-box .button{display:none}.print-amount{display:inline;overflow-wrap:anywhere;text-align:right}.detail-heading h1{font-size:30px}.recipe-notes{background:#fff}.print-only{display:block}.detail-photo{max-height:180px}dialog{display:none!important}}
 
+
+
+/* A visible, session-only cooking mode on every view. */
+.topbar{height:auto;min-height:79px;flex-wrap:wrap;gap:8px 14px;padding-top:12px;padding-bottom:10px}.topbar-controls{display:flex;align-items:center;gap:14px}.cook-mode-status{display:flex;align-items:center;justify-content:flex-end;gap:10px;width:100%;color:#67775e;font-size:10px;line-height:1.6}.cook-mode-error{color:#a13d2f}.cook-mode-status .button{font-size:11px;min-height:32px;padding:5px 9px}#cook-retry[hidden]{display:none}#cook-toggle{min-height:44px}.topbar-controls .button:disabled{cursor:default}
+@media(max-width:760px){.topbar{min-height:62px;gap:7px}.topbar-controls{gap:8px}.topbar-controls .device-label{display:none}#cook-toggle{font-size:12px;padding:10px 12px}.cook-mode-status{justify-content:flex-start;font-size:10px}}
