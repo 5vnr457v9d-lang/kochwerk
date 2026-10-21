@@ -31,8 +31,9 @@ export function validateRecipe(r, books) {
     if(!name||typeof i.amount!=='number'||!Number.isFinite(i.amount)||i.amount<0||i.amount>1e12)throw new Error('Jede Zutat braucht einen Namen und eine Menge zwischen 0 und 1 Billion.');
     return {id:id(i.id),name,amount:i.amount,unit};
   }); unique(ingredients);
-  const masterId=id(r.masterId), master=ingredients.find(i=>i.id===masterId);
-  if(!master||master.amount<=0)throw new Error('Bitte genau eine Masterzutat mit einer Menge größer als 0 wählen.');
+  // Retain the legacy field for existing version-1 backups; the UI no longer selects a master.
+  const masterId=ingredients.find(i=>i.id===r.masterId&&i.amount>0)?.id??ingredients.find(i=>i.amount>0)?.id;
+  if(!masterId)throw new Error('Mindestens eine Zutatenmenge muss größer als 0 sein.');
   if(!Array.isArray(r.bookIds)||r.bookIds.some(b=>!books.some(x=>x.id===b)))throw new Error('Unbekanntes Kochbuch.');
   if(!Array.isArray(r.steps)||r.steps.length>150)throw new Error('Ungültige Zubereitung.');
   if(!Number.isInteger(r.minutes)||r.minutes<0||r.minutes>100000)throw new Error('Zeit muss eine ganze Zahl zwischen 0 und 100000 sein.');
@@ -40,11 +41,12 @@ export function validateRecipe(r, books) {
   if(typeof photo!=='string'||photo.length>1500000||(photo&&!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(photo)))throw new Error('Ungültiges Rezeptbild.');
   return {id:id(r.id),title,description:string(r.description??'','Beschreibung',500),notes:string(r.notes??'','Notizen'),minutes:r.minutes,ingredients,masterId,bookIds:[...new Set(r.bookIds)],steps:r.steps.map(s=>string(s,'Schritt',5000)).filter(Boolean),favorite:r.favorite===true,photo,createdAt:string(r.createdAt??new Date().toISOString(),'Datum',50),updatedAt:string(r.updatedAt??new Date().toISOString(),'Datum',50)};
 }
-export function scaleRecipe(recipe,target) {
+export function scaleRecipe(recipe,target,ingredientId=recipe.masterId) {
   if(typeof target!=='number'||!Number.isFinite(target)||target<=0)throw new Error('Die Zielmenge muss größer als 0 sein.');
-  const master=recipe.ingredients.find(i=>i.id===recipe.masterId);
-  if(!master||!Number.isFinite(master.amount)||master.amount<=0)throw new Error('Die Masterzutat fehlt oder ist ungültig.');
-  const factor=target/master.amount;
+  const reference=recipe.ingredients.find(i=>i.id===ingredientId);
+  if(!reference||!Number.isFinite(reference.amount)||reference.amount<0)throw new Error('Die ausgewählte Zutat fehlt oder ist ungültig.');
+  if(reference.amount===0)throw new Error('Eine Originalmenge von 0 kann nicht als Grundlage für die Umrechnung dienen.');
+  const factor=target/reference.amount;
   if(!Number.isFinite(factor)||factor<=0)throw new Error('Ungültiger Skalierungsfaktor.');
   const ingredients=recipe.ingredients.map(i=>{
     const amount=i.amount*factor;
@@ -68,3 +70,4 @@ export function mergeBackup(current,incoming) {
   for(const r of data.recipes)result.recipes.push({...r,id:uid(),bookIds:r.bookIds.map(b=>map.get(b))});
   return validateBackup(result);
 }
+

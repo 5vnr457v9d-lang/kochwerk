@@ -2,7 +2,7 @@
   "id":"./",
   "name":"Kochwerk – Dein Rezeptbuch",
   "short_name":"Kochwerk",
-  "description":"Rezepte sammeln, in Kochbüchern ordnen und über eine Masterzutat skalieren. Lokal und offline.",
+  "description":"Rezepte sammeln, in Kochbüchern ordnen und über jede beliebige Zutat skalieren. Lokal und offline.",
   "lang":"de-DE",
   "start_url":"./",
   "scope":"./",
@@ -14,3 +14,4 @@
     {"src":"./icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
   ]
 }
+
