@@ -177,7 +177,7 @@ async function updateOfflineStatus(){
   let status,offlineReady=false;
   if(!isSecureContext)status='HTTPS oder localhost für Offline-Betrieb erforderlich.';
   else if(!('serviceWorker' in navigator))status='Dieser Browser unterstützt den Offline-Speicher nicht.';
-  else{try{const reg=await navigator.serviceWorker.getRegistration();const cache=await caches.open('kochwerk-shell-v6');const complete=!!(await cache.match(new URL('./app.js',location.href)));offlineReady=!!(reg?.active&&complete);status=offlineReady?'Offline bereit · App-Dateien auf diesem Gerät gespeichert.':'Offline-Speicher noch nicht bereit. Bitte die App online neu öffnen.';}catch{status='Offline-Speicher konnte nicht geprüft werden.';}}
+  else{try{const reg=await navigator.serviceWorker.getRegistration();const cache=await caches.open('kochwerk-shell-v7');const complete=!!(await cache.match(new URL('./app.js',location.href)));offlineReady=!!(reg?.active&&complete);status=offlineReady?'Offline bereit · App-Dateien auf diesem Gerät gespeichert.':'Offline-Speicher noch nicht bereit. Bitte die App online neu öffnen.';}catch{status='Offline-Speicher konnte nicht geprüft werden.';}}
   $('#offline-state').textContent=status;
   $('.device-label').textContent=offlineReady?'● Offline bereit':'● Offline-Status: Daten & App';
   $('.device-label').title=status;
@@ -224,6 +224,8 @@ window.addEventListener('beforeunload',e=>{if(modal.open&&$('#edit-form',modal))
 document.addEventListener('visibilitychange',()=>{void cookingMode.setVisible(document.visibilityState==='visible');});
 window.addEventListener('pagehide',()=>{void cookingMode.setVisible(false);});
 window.addEventListener('pageshow',()=>{void cookingMode.setVisible(document.visibilityState==='visible');});
+window.addEventListener('load',()=>{void cookingMode.refresh();});
+window.addEventListener('focus',()=>{void cookingMode.setVisible(document.visibilityState==='visible');});
 document.addEventListener('pointerdown',()=>{void cookingMode.retryAfterInteraction();},{passive:true});
 document.addEventListener('keydown',()=>{void cookingMode.retryAfterInteraction();});
 async function start(){

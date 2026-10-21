@@ -12,6 +12,7 @@ function fixture(options={}){
   const mode=createCookingMode({wakeLock,onChange:s=>states.push(s),...options});
   return {mode,calls,states,locks};
 }
+function automatic(options){return createAutomaticCookingMode({schedule:()=>0,cancel:()=>{},...options});}
 function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};}
 
 test('Wachhalten wird nur nach dem Einschalten angefordert und danach wieder beendet',async()=>{
@@ -85,32 +86,82 @@ test('Einschalten im Hintergrund wartet bis zur sichtbaren App',async()=>{
 });
 test('Automatik fordert die Sperre beim Erstellen ohne Schalter an',async()=>{
   const calls=[],lock=new Sentinel();
-  const mode=createAutomaticCookingMode({wakeLock:{request:async type=>{calls.push(type);return lock;}}});
+  const mode=automatic({wakeLock:{request:async type=>{calls.push(type);return lock;}}});
   await mode.ready;assert.deepEqual(calls,['screen']);assert.equal(mode.state.active,true);
 });
 test('Automatik pausiert im Hintergrund und fordert bei Rückkehr erneut an',async()=>{
-  const locks=[];const mode=createAutomaticCookingMode({wakeLock:{request:async()=>{const lock=new Sentinel();locks.push(lock);return lock;}}});
+  const locks=[];const mode=automatic({wakeLock:{request:async()=>{const lock=new Sentinel();locks.push(lock);return lock;}}});
   await mode.ready;await mode.setVisible(false);assert.equal(locks[0].released,true);
   await mode.setVisible(true);assert.equal(locks.length,2);assert.equal(mode.state.active,true);
 });
 test('Eine versteckt gestartete Automatik wartet auf die sichtbare App',async()=>{
-  let calls=0;const mode=createAutomaticCookingMode({visible:false,wakeLock:{request:async()=>{calls++;return new Sentinel();}}});
+  let calls=0;const mode=automatic({visible:false,wakeLock:{request:async()=>{calls++;return new Sentinel();}}});
   await mode.ready;assert.equal(calls,0);await mode.setVisible(true);assert.equal(calls,1);
 });
 test('Normale Bedienung kann eine abgelehnte automatische Anfrage erneut versuchen',async()=>{
-  let calls=0;const mode=createAutomaticCookingMode({wakeLock:{request:async()=>{if(++calls===1)throw new Error('denied');return new Sentinel();}}});
+  let calls=0;const mode=automatic({wakeLock:{request:async()=>{if(++calls===1)throw new Error('denied');return new Sentinel();}}});
   await mode.ready;assert.equal(mode.state.active,false);await mode.retryAfterInteraction();assert.equal(mode.state.active,true);
   await mode.retryAfterInteraction();assert.equal(calls,2);
 });
 test('Wiederholte Ablehnung führt bei vielen Eingaben zu keiner Anfrageschleife',async()=>{
-  let calls=0,time=0;const mode=createAutomaticCookingMode({now:()=>time,wakeLock:{request:async()=>{calls++;throw new Error('denied');}}});
+  let calls=0,time=0;const mode=automatic({now:()=>time,wakeLock:{request:async()=>{calls++;throw new Error('denied');}}});
   await mode.ready;await mode.retryAfterInteraction();assert.equal(calls,2);
   for(let n=0;n<20;n++)await mode.retryAfterInteraction();assert.equal(calls,2);
   time=10000;await mode.retryAfterInteraction();assert.equal(calls,3);
 });
 test('Automatik bleibt bei fehlender Unterstützung ohne Anfragen bedienbar',async()=>{
-  const mode=createAutomaticCookingMode({wakeLock:undefined});await mode.ready;
+  const mode=automatic({wakeLock:undefined});await mode.ready;
   await mode.retryAfterInteraction();await mode.setVisible(false);await mode.setVisible(true);
   assert.equal(mode.state.phase,'unsupported');assert.equal(mode.state.active,false);
 });
 
+function clock(){
+  let time=0,id=0;const tasks=new Map();
+  return {
+    schedule(fn,delay){const key=++id;tasks.set(key,{fn,at:time+delay});return key;},
+    cancel(key){tasks.delete(key);},
+    get size(){return tasks.size;},
+    async advance(delta){const end=time+delta;while(true){const next=[...tasks].filter(([,v])=>v.at<=end).sort((a,b)=>a[1].at-b[1].at)[0];if(!next)break;time=next[1].at;tasks.delete(next[0]);await next[1].fn();}time=end;}
+  };
+}
+function timedMode(options={}){
+  const timer=clock();let requests=0;
+  const mode=createAutomaticCookingMode({schedule:timer.schedule,cancel:timer.cancel,wakeLock:{request:async()=>{requests++;throw new Error('not fully active');}},...options});
+  return {mode,timer,get requests(){return requests;}};
+}
+test('Startfehler wird ohne Bedienung automatisch erneut versucht',async()=>{
+  let calls=0;const {mode,timer}=timedMode({wakeLock:{request:async()=>{if(++calls<3)throw new Error('not ready');return new Sentinel();}}});
+  await mode.ready;assert.equal(mode.state.phase,'error');await timer.advance(1200);
+  assert.equal(calls,3);assert.equal(mode.state.active,true);await timer.advance(5000);assert.equal(calls,3);
+});
+test('Dauerhafte Ablehnung beendet die Startversuche nach drei Wiederholungen',async()=>{
+  const f=timedMode();await f.mode.ready;await f.timer.advance(100000);
+  assert.equal(f.requests,4);assert.equal(f.timer.size,0);assert.equal(f.mode.state.active,false);
+});
+test('Hintergrund beendet ausstehende Startversuche; Rückkehr startet neue',async()=>{
+  const f=timedMode();await f.mode.ready;await f.mode.setVisible(false);assert.equal(f.timer.size,0);
+  await f.timer.advance(5000);assert.equal(f.requests,1);await f.mode.setVisible(true);await f.timer.advance(300);
+  assert.equal(f.requests,3);
+});
+test('Versteckter Start plant keine Anfragen oder Wiederholungen',async()=>{
+  const f=timedMode({visible:false});await f.mode.ready;await f.timer.advance(5000);
+  assert.equal(f.requests,0);assert.equal(f.timer.size,0);
+});
+test('Spätes Laden startet begrenzte Versuche neu ohne Timer zu vervielfachen',async()=>{
+  const f=timedMode();await f.mode.ready;await f.timer.advance(5000);
+  await f.mode.refresh();await f.mode.refresh();assert.equal(f.timer.size,3);
+  await f.timer.advance(5000);assert.equal(f.timer.size,0);assert.equal(f.requests,9);
+});
+test('Langsame Anfrage wird durch Starttimer nicht parallel erneut angefordert',async()=>{
+  const pending=deferred();let calls=0;
+  const {mode,timer}=timedMode({wakeLock:{request:()=>{calls++;return pending.promise;}}});
+  await timer.advance(5000);assert.equal(calls,1);pending.resolve(new Sentinel());await mode.ready;assert.equal(mode.state.active,true);
+});
+test('Während des Starts freigegebene Sperre wird ohne Bedienung erneut angefordert',async()=>{
+  const locks=[];const {mode,timer}=timedMode({wakeLock:{request:async()=>{const lock=new Sentinel();locks.push(lock);return lock;}}});
+  await mode.ready;await locks[0].release();await timer.advance(300);
+  assert.equal(mode.state.active,true);assert.equal(locks.length,2);
+});
+test('Fehlende API plant keine Starttimer',async()=>{
+  const f=timedMode({wakeLock:undefined});await f.mode.ready;assert.equal(f.timer.size,0);await f.mode.refresh();assert.equal(f.timer.size,0);
+});

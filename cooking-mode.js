@@ -81,18 +81,42 @@ export function createCookingMode({wakeLock,secure=true,visible=true,onChange=()
   };
 }
 
-/** Start on page load. Retry failures on ordinary interaction, at most once per 10 seconds. */
-export function createAutomaticCookingMode({now=()=>Date.now(),...options}={}) {
+/** Bounded retries cover pages that become fully active after their first request. */
+export function createAutomaticCookingMode({now=()=>Date.now(),schedule=setTimeout,cancel=clearTimeout,...options}={}) {
   const controller=createCookingMode(options);
+  let visible=options.visible!==false;
   let lastInteractionAttempt=-Infinity;
+  const timers=new Set();
+  function clearRetries(){for(const timer of timers)cancel(timer);timers.clear();}
+  function retryIfNeeded(){
+    const state=controller.state;
+    return visible&&state.enabled&&!state.active&&['error','released'].includes(state.phase)
+      ?controller.retry():Promise.resolve();
+  }
+  function scheduleRetries(){
+    clearRetries();
+    if(!visible||!controller.state.supported)return;
+    for(const delay of [300,1200,3000]){
+      const timer=schedule(()=>{timers.delete(timer);return retryIfNeeded();},delay);
+      timers.add(timer);
+    }
+  }
   const ready=controller.enable();
+  scheduleRetries();
   return {
     get state(){return controller.state;},
     ready,
-    setVisible:controller.setVisible,
+    setVisible(value){
+      visible=!!value;
+      const task=controller.setVisible(visible);
+      scheduleRetries();
+      return task;
+    },
+    // load/focus can happen after the initial request, without any user input.
+    refresh(){scheduleRetries();return retryIfNeeded();},
     retryAfterInteraction(){
       const state=controller.state;
-      if(!state.enabled||state.active||!['error','released'].includes(state.phase))return Promise.resolve();
+      if(!visible||!state.enabled||state.active||!['error','released'].includes(state.phase))return Promise.resolve();
       const timestamp=now();
       if(timestamp-lastInteractionAttempt<10000)return Promise.resolve();
       lastInteractionAttempt=timestamp;
@@ -100,4 +124,3 @@ export function createAutomaticCookingMode({now=()=>Date.now(),...options}={}) {
     }
   };
 }
-

@@ -25,7 +25,7 @@ Im geöffneten Rezept kann jede Zutatenmenge direkt geändert werden. Die übrig
 
 ## Prüfung
 
-67 automatisierte fachliche und simulierte Offline-Tests bestanden; beide statischen Starthelfer auf Linux geprüft. Installation, interaktive Bedienung und tatsächlicher Offline-Neustart auf einem echten iPhone sind noch nicht praktisch bestätigt.
+75 automatisierte fachliche und simulierte Offline-Tests bestanden; beide statischen Starthelfer auf Linux geprüft. Die Tests simulieren Wake-Lock- und Offline-Lebenszyklen. Ein automatisierter Test auf echten iPhones oder Android-Geräten wurde nicht durchgeführt.
 
 Aktueller Quellcode und Tests liegen in diesem Repository.
 
@@ -37,8 +37,14 @@ Mit Node.js 22 oder neuer: `node --test tests/*.test.js`. Die Tests prüfen die 
 
 Kochwerk fordert beim Öffnen automatisch einen Screen Wake Lock an. Es gibt dafür keinen Schalter. Die Statusmeldung „Bildschirm bleibt an, solange Kochwerk sichtbar ist“ wird erst nach einer erfolgreichen Bestätigung durch das Gerät angezeigt.
 
-Im Hintergrund wird die Sperre freigegeben und beim Zurückkehren erneut angefordert. Wurde das Wachhalten vom System aufgehoben oder abgelehnt, erfolgt außerdem bei der nächsten normalen Bedienung ein neuer Versuch; wiederholte Eingaben werden auf höchstens einen solchen Versuch je zehn Sekunden begrenzt. Es gibt keine dauernde Abfrageschleife.
+Beim Start, nach dem Laden sowie bei der Rückkehr in die App wird das Wachhalten erneut geprüft. Nach einer frühen Ablehnung folgen ohne Bedienung bis zu drei weitere Versuche nach 0,3, 1,2 und 3 Sekunden. Bereits aktives Wachhalten oder eine laufende Anfrage erzeugen keine zusätzliche Anfrage. Im Hintergrund werden geplante Versuche abgebrochen und die Sperre freigegeben; beim Zurückkehren wird sie neu angefordert. Wurde das Wachhalten vom System aufgehoben oder abgelehnt, erfolgt außerdem bei der nächsten normalen Bedienung ein neuer Versuch; wiederholte Eingaben werden auf höchstens einen solchen Versuch je zehn Sekunden begrenzt. Es gibt keine dauernde Abfrageschleife.
 
-Home-Bildschirm-Apps unterstützen Screen Wake Lock auf iOS/iPadOS seit 18.4. Stromsparmodus, niedriger Akkustand oder Systemrichtlinien können das Wachhalten verhindern oder beenden; dann erscheint ein Hinweis. Manuelles Sperren lässt sich nicht verhindern. Auf einem echten iPhone wurde das Verhalten noch nicht praktisch bestätigt.
+Home-Bildschirm-Apps unterstützen Screen Wake Lock auf iOS/iPadOS seit 18.4. Stromsparmodus, niedriger Akkustand oder Systemrichtlinien können das Wachhalten verhindern oder beenden; dann erscheint ein Hinweis. Manuelles Sperren lässt sich nicht verhindern. Der Nutzer hat das Wachhalten auf dem iPhone nach Bedienung bestätigt; der korrigierte Start ohne Bedienung muss dort noch praktisch überprüft werden.
 
 Referenzen: [WebKit: Safari 18.4](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/), [MDN: Screen Wake Lock API](https://developer.mozilla.org/en-US/docs/Web/API/Screen_Wake_Lock_API).
+
+## Plattformen
+
+Kochwerk verwendet Webstandards und ist für aktuelle Browser auf iPhone/iPad, Android und Desktop ausgelegt. Chrome unter Android unterstützt Screen Wake Lock; Home-Bildschirm-Apps auf iOS/iPadOS benötigen dafür mindestens 18.4. Installation, Dateiauswahl und Systemfreigaben unterscheiden sich je nach Browser. Geräte- und Browsereinstellungen können das Wachhalten verhindern. Eine vollständige Geräte- und Browser-Testmatrix liegt nicht vor. Rezepte und Bilder bleiben lokal je Browser und Gerät; ein Gerätewechsel erfolgt über Export/Import und synchronisiert nicht automatisch.
+
+Referenz: [Chrome: Screen Wake Lock](https://developer.chrome.com/docs/capabilities/web-apis/wake-lock).
