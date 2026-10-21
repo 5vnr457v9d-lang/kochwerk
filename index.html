@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#264d3c"><meta name="description" content="Dein privates Kochbuch. Rezepte sammeln, in Kochbüchern ordnen und über eine Masterzutat skalieren. Lokal und offline.">
+  <meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Kochwerk"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-src 'none'">
+  <title>Kochwerk · Dein Rezeptbuch</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="./icon-192.png"><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Zum Inhalt</a>
+  <aside class="sidebar">
+    <a href="#recipes" class="brand"><span class="brand-icon">k.</span>kochwerk</a>
+    <p class="eyebrow sidebar-caption">DEIN PERSÖNLICHES REZEPTBUCH</p>
+    <nav class="navigation" aria-label="Hauptnavigation">
+      <a href="#recipes" data-nav="recipes"><span data-icon="recipes"></span>Alle Rezepte <span id="recipe-count" class="count">0</span></a>
+      <a href="#books" data-nav="books"><span data-icon="book"></span>Kochbücher</a>
+      <a href="#favorites" data-nav="favorites"><span data-icon="heart"></span>Lieblingsrezepte</a>
+      <a href="#settings" data-nav="settings"><span data-icon="settings"></span>Daten & App</a>
+    </nav>
+    <div class="sidebar-books"><div class="small-heading">MEINE KOCHBÜCHER <button class="icon-button" data-action="new-book" aria-label="Kochbuch anlegen">+</button></div><div id="book-links"></div></div>
+    <div class="local-card"><span class="status-dot"></span><strong>Hier ist alles deins.</strong><p>Rezepte auf diesem Gerät.<br>Ohne Konto. Ohne Cloud.</p><span id="offline-state">Offline-Speicher wird geprüft …</span></div>
+  </aside>
+  <div class="workspace"><header class="topbar"><span class="breadcrumb">MEINE KÜCHE <span>/</span> <b id="page-label">Rezeptsammlung</b></span><span class="device-label"><span class="status-dot"></span> Lokal gespeichert</span></header>
+    <main id="main" tabindex="-1"><div class="loading">Dein Kochbuch wird geöffnet …<p class="muted">Falls diese Meldung bleibt: Bitte über Start-Windows.cmd oder eine HTTPS-Adresse öffnen. Ein Doppelklick auf index.html genügt nicht.</p></div></main>
+    <footer class="page-footer"><span>Mit Liebe gesammelt. Mit Freude gekocht.</span><span>KOCHWERK · 1.0</span></footer>
+  </div>
+  <dialog id="modal" aria-labelledby="modal-title"></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <noscript>Bitte JavaScript aktivieren. Kochwerk speichert Rezepte lokal im Browser.</noscript>
+</body></html>
