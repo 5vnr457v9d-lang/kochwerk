@@ -8,7 +8,9 @@ Lokales digitales Kochbuch als installierbare PWA.
 - Frei anlegbare Kochbücher; mehrere Bücher pro Rezept
 - Jede beliebige Zutatenmenge direkt ändern und alle übrigen Mengen proportional berechnen
 - Rezeptbilder, Favoriten, Suche und Druckansicht
-- Kreuz in der Suchleiste bei nichtleerem Text: leert die Suche, aktualisiert die Ergebnisse und setzt den Fokus zurück ins Suchfeld; Kochbuchfilter und Sortierung bleiben erhalten
+- Enter im Suchfeld beendet den Fokus und damit die Texteingabe.
+- Enter in einzeiligen Eingabefeldern der Rezept- und Kochbucheditoren löst kein Speichern aus. Mehrzeilige Felder behalten Zeilenumbrüche; Speichern bleibt über den Speichern-Button möglich.
+- Kreuz in der Suchleiste bei nichtleerem Text: leert die Suche, aktualisiert die Ergebnisse und beendet den Fokus im Suchfeld; Kochbuchfilter und Sortierung bleiben erhalten
 - IndexedDB auf dem jeweiligen Gerät; keine Rezept-Cloud
 - JSON-Sicherungen exportieren und ergänzend importieren
 - Service Worker für die Offline-Nutzung nach erfolgreichem Laden

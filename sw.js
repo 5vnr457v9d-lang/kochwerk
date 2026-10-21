@@ -1,5 +1,5 @@
 /* Increase the version whenever any shell file changes. Old workers wait until all app windows close. */
-const CACHE='kochwerk-shell-v9';
+const CACHE='kochwerk-shell-v10';
 const FILES=['./','./index.html','./styles.css','./app.js','./domain.js','./storage.js','./demo.js','./art.js','./cooking-mode.js','./manifest.webmanifest','./icon.svg','./icon-192.png','./icon-512.png'];
 const base=new URL('./',self.location.href);
 const allowed=new Set(FILES.map(file=>new URL(file,base).href));
