@@ -9,7 +9,7 @@ Lokales digitales Kochbuch als installierbare PWA.
 - Jede beliebige Zutatenmenge direkt ändern und alle übrigen Mengen proportional berechnen
 - Rezeptbilder, Favoriten, Suche und Druckansicht
 - Enter im Suchfeld beendet den Fokus und damit die Texteingabe.
-- Enter in einzeiligen Eingabefeldern der Rezept- und Kochbucheditoren löst kein Speichern aus. Mehrzeilige Felder behalten Zeilenumbrüche; Speichern bleibt über den Speichern-Button möglich.
+- Enter beendet die Eingabe in einzeiligen Text- und Mengenfeldern ohne Speichern. In der Zutatenbezeichnung springt Enter stattdessen zur Menge derselben Zeile und markiert den bisherigen Wert. Mehrzeilige Felder behalten Zeilenumbrüche; Speichern bleibt über den Speichern-Button möglich.
 - Kreuz in der Suchleiste bei nichtleerem Text: leert die Suche, aktualisiert die Ergebnisse und beendet den Fokus im Suchfeld; Kochbuchfilter und Sortierung bleiben erhalten
 - IndexedDB auf dem jeweiligen Gerät; keine Rezept-Cloud
 - JSON-Sicherungen exportieren und ergänzend importieren

@@ -50,7 +50,6 @@ function renderRecipes(page='recipes',id=''){
     +`<div class="tools"><div class="search">${icon('search')}<input id="search" type="search" placeholder="Rezept oder Zutat suchen …" aria-label="Rezepte und Zutaten durchsuchen" enterkeyhint="search" value="${escape(query)}" maxlength="160"><button id="clear-search" type="button" class="icon-button search-clear" aria-label="Suche löschen" title="Suche löschen" ${query?'':'hidden'}>${icon('close')}</button></div><div class="filters">${!book?`<select id="book-filter" aria-label="Nach Kochbuch filtern"><option value="">Alle Kochbücher</option>${data.books.map(b=>`<option value="${escape(b.id)}" ${bookFilter===b.id?'selected':''}>${escape(b.name)}</option>`).join('')}</select>`:''}<select id="sort" aria-label="Rezepte sortieren"><option value="recent" ${sort==='recent'?'selected':''}>Zuletzt bearbeitet</option><option value="title" ${sort==='title'?'selected':''}>Name A–Z</option><option value="time" ${sort==='time'?'selected':''}>Zubereitungszeit</option></select></div></div><div class="section-title"><h2>${book?'Im Kochbuch':page==='favorites'?'Deine Favoriten':'Deine Sammlung'}</h2><p id="result-count"></p></div><div id="recipe-results"></div><div class="note-strip">${icon('leaf')}<span><strong>So viel, wie du brauchst.</strong> Ändere im Rezept die Menge einer beliebigen Zutat. Alle anderen Zutaten passen sich proportional an.</span></div>`;
   const search=$('#search'),clearSearch=$('#clear-search');
   search.addEventListener('input',()=>{query=search.value;clearSearch.hidden=!query;renderResults();});
-  search.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();search.blur();}});
   clearSearch.addEventListener('click',()=>{query='';search.value='';search.blur();clearSearch.hidden=true;renderResults();});
   $('#book-filter')?.addEventListener('change',e=>{bookFilter=e.target.value;renderResults();});
   $('#sort').addEventListener('change',e=>{sort=e.target.value;renderResults();});
@@ -108,7 +107,7 @@ function resetScale(r){
 function renderSettings(){
   main.innerHTML=hero('Dein Kochbuch.<br><em>In deiner Hand.</em>','Alle Rezepte und Bilder bleiben auf diesem Gerät. Mit einer Sicherung kannst du sie auf ein anderes Gerät mitnehmen.','')
     +`<section class="panel"><h2>Sichern & mitnehmen</h2><p>Exportiere regelmäßig eine Sicherungsdatei. Sie enthält alle Rezepte, Bilder und Kochbücher. Beim Import werden Rezepte als neue Einträge ergänzt; vorhandene Rezepte bleiben erhalten. Kochbücher mit gleichem Namen werden zusammengeführt.</p>${button('Sicherung exportieren','export','download','primary')}${button('Sicherung importieren','import','upload')}<input id="import-file" type="file" accept=".json,application/json" hidden><p class="muted">${data.recipes.length} Rezepte · ${data.books.length} Kochbücher · Sicherungsformat Version 1</p><p class="muted" id="last-backup"></p><p class="form-error" role="alert"></p></section>
-    <section class="panel"><h2>Auf den Home-Bildschirm</h2><p class="muted">Kochwerk · Version 1.2.5</p><p>iPhone: Kochwerk in Safari über eine HTTPS-Adresse öffnen, im Teilen-Menü „Zum Home-Bildschirm“ wählen und „Als Web-App öffnen“ aktivieren. Danach Kochwerk über das neue Symbol starten und warten, bis „Offline bereit“ angezeigt wird.</p><p id="offline-details" class="muted"></p>${installPrompt?button('App installieren','install','plus','primary'):''}${button('Offline-Status prüfen','check-offline','check')}</section>
+    <section class="panel"><h2>Auf den Home-Bildschirm</h2><p class="muted">Kochwerk · Version 1.2.6</p><p>iPhone: Kochwerk in Safari über eine HTTPS-Adresse öffnen, im Teilen-Menü „Zum Home-Bildschirm“ wählen und „Als Web-App öffnen“ aktivieren. Danach Kochwerk über das neue Symbol starten und warten, bis „Offline bereit“ angezeigt wird.</p><p id="offline-details" class="muted"></p>${installPrompt?button('App installieren','install','plus','primary'):''}${button('Offline-Status prüfen','check-offline','check')}</section>
     <section class="panel"><h2>Lokaler Speicher</h2><p>Es gibt kein Benutzerkonto, keine Synchronisierung und keine Übertragung deiner Rezepte an einen Server. Browserdaten sind an diese Adresse und den verwendeten Browser gebunden. Ein anderer Port zählt ebenfalls als andere Adresse.</p><p>Das Löschen von Websitedaten oder das Entfernen der App kann Daten löschen. Auch das Betriebssystem kann lokalen Speicher freigeben. Eine exportierte Sicherung schützt vor Datenverlust.</p>${button('Dauerhaften Speicher anfragen','persist','check')}<p id="storage-status" class="muted"></p></section>
     <section class="panel"><h2>Einfach ausprobieren</h2><p>Vier bearbeitbare Beispielrezepte für Brot, Kuchen und die Alltagsküche. Geh- und Backzeiten sind Richtwerte.</p>${button('Beispielrezepte ergänzen','load-demo','book')}</section>`;
   try{$('#last-backup').textContent=localStorage.getItem('kochwerk-last-export')?'Zuletzt exportiert: '+new Date(localStorage.getItem('kochwerk-last-export')).toLocaleString('de-DE'): 'Noch keine Sicherung exportiert.';}catch{}
@@ -141,7 +140,7 @@ function openRecipeEditor(recipe){
   });
   $('#photo-input').addEventListener('change',handlePhoto);
 }
-function ingredientRow(i){return `<div class="ingredient-row" data-id="${escape(i.id)}"><input name="ingredient-name" value="${escape(i.name)}" placeholder="Zutat" aria-label="Zutat" required maxlength="160"><input name="ingredient-amount" value="${typeof i.amount==='number'?decimalString(i.amount):''}" inputmode="decimal" placeholder="500" aria-label="Menge" required><input name="ingredient-unit" value="${escape(i.unit)}" placeholder="g" aria-label="Einheit" maxlength="30">${iconButton('close','remove-ingredient','Zutat entfernen')}</div>`;}
+function ingredientRow(i){return `<div class="ingredient-row" data-id="${escape(i.id)}"><input name="ingredient-name" enterkeyhint="next" value="${escape(i.name)}" placeholder="Zutat" aria-label="Zutat" required maxlength="160"><input name="ingredient-amount" enterkeyhint="done" value="${typeof i.amount==='number'?decimalString(i.amount):''}" inputmode="decimal" placeholder="500" aria-label="Menge" required><input name="ingredient-unit" enterkeyhint="done" value="${escape(i.unit)}" placeholder="g" aria-label="Einheit" maxlength="30">${iconButton('close','remove-ingredient','Zutat entfernen')}</div>`;}
 function stepRow(text,n){return `<div class="step-row"><span class="step-number">${n+1}</span><textarea aria-label="Zubereitungsschritt ${n+1}" maxlength="5000" placeholder="Was ist zu tun?">${escape(text)}</textarea>${iconButton('close','remove-step','Schritt entfernen')}</div>`;}
 function photoPreview(){return editorPhoto?`<img class="photo-preview" src="${editorPhoto}" alt="Rezeptbild-Vorschau">${button('Bild entfernen','remove-photo','trash')}`:'';}
 async function handlePhoto(e){
@@ -181,7 +180,7 @@ async function updateOfflineStatus(){
   let status,offlineReady=false;
   if(!isSecureContext)status='HTTPS oder localhost für Offline-Betrieb erforderlich.';
   else if(!('serviceWorker' in navigator))status='Dieser Browser unterstützt den Offline-Speicher nicht.';
-  else{try{const reg=await navigator.serviceWorker.getRegistration();const cache=await caches.open('kochwerk-shell-v10');const complete=!!(await cache.match(new URL('./app.js',location.href)));offlineReady=!!(reg?.active&&complete);status=offlineReady?'Offline bereit · App-Dateien auf diesem Gerät gespeichert.':'Offline-Speicher noch nicht bereit. Bitte die App online neu öffnen.';}catch{status='Offline-Speicher konnte nicht geprüft werden.';}}
+  else{try{const reg=await navigator.serviceWorker.getRegistration();const cache=await caches.open('kochwerk-shell-v11');const complete=!!(await cache.match(new URL('./app.js',location.href)));offlineReady=!!(reg?.active&&complete);status=offlineReady?'Offline bereit · App-Dateien auf diesem Gerät gespeichert.':'Offline-Speicher noch nicht bereit. Bitte die App online neu öffnen.';}catch{status='Offline-Speicher konnte nicht geprüft werden.';}}
   $('#offline-state').textContent=status;
   $('.device-label').textContent=offlineReady?'● Offline bereit':'● Offline-Status: Daten & App';
   $('.device-label').title=status;
@@ -219,11 +218,16 @@ function confirmDiscard(){
   const box=document.createElement('div');box.className='modal-body error-banner';box.id='discard-confirm';box.innerHTML='<p>Bearbeitung ohne Speichern schließen?</p><div class="empty-actions"><button class="button" id="keep-editing">Weiter bearbeiten</button><button class="button danger" id="discard-editing">Verwerfen</button></div>';modal.prepend(box);box.scrollIntoView({block:'start'});$('#keep-editing').onclick=()=>box.remove();$('#discard-editing').onclick=()=>modal.close();$('#keep-editing').focus();
 }
 document.addEventListener('click',e=>{const el=e.target.closest('[data-action]');if(el){e.preventDefault();Promise.resolve(handleAction(el.dataset.action,el)).catch(err=>error(err));}});
-// Enter in a single-line editor field must not implicitly save and close the dialog.
-modal.addEventListener('keydown',e=>{
+// Finish single-line input without submitting; ingredient names advance within their own row.
+document.addEventListener('keydown',e=>{
   if(e.key!=='Enter'||e.isComposing)return;
   const input=e.target;
-  if(input.tagName==='INPUT'&&input.form?.id==='edit-form'&&!['button','submit','reset','file','checkbox','radio'].includes(input.type))e.preventDefault();
+  if(input.tagName!=='INPUT'||['button','submit','reset','file','checkbox','radio','range','color','hidden'].includes(input.type))return;
+  e.preventDefault();
+  const amount=input.form?.id==='edit-form'&&input.name==='ingredient-name'
+    ?input.closest('.ingredient-row')?.querySelector('[name="ingredient-amount"]'):null;
+  if(amount&&!amount.disabled){amount.focus();amount.select();}
+  else input.blur();
 });
 modal.addEventListener('cancel',e=>{if($('#edit-form',modal)){e.preventDefault();confirmDiscard();}});
 window.addEventListener('hashchange',()=>{if(modal.open)modal.close();render();window.scrollTo(0,0);main.focus({preventScroll:true});});
