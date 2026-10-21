@@ -19,3 +19,6 @@
 /* Reserve both header rows so wake-lock and offline messages cannot move the page. */
 .topbar{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:20px 32px;height:auto;min-height:0;gap:8px 14px;padding-top:12px;padding-bottom:10px}.breadcrumb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.device-label{white-space:nowrap}.cook-mode-status{grid-column:1/-1;display:flex;align-items:center;justify-content:flex-end;height:32px;color:#67775e;font-size:10px;line-height:16px}.cook-mode-error{color:#a13d2f}
 @media(max-width:760px){.topbar{gap:7px 10px}.device-label{max-width:140px;overflow:hidden;text-overflow:ellipsis}.cook-mode-status{justify-content:flex-start}}
+
+/* One consistent clear control, including Safari's search fields. */
+.search{padding-right:4px}.search-clear{flex-shrink:0;min-width:44px;min-height:44px;color:#67775e}.search-clear[hidden]{display:none}.search input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
