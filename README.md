@@ -5,6 +5,8 @@ Lokales digitales Kochbuch als installierbare PWA.
 ## Funktionen
 
 - Rezepte erstellen, bearbeiten, duplizieren und löschen
+- Zutaten brauchen nur einen Namen; Menge und Einheit sind unabhängig voneinander optional
+- Zutaten im Rezepteditor mit Pfeilen nach oben oder unten verschieben; die Reihenfolge wird beim Speichern übernommen
 - Frei anlegbare Kochbücher; mehrere Bücher pro Rezept
 - Jede beliebige Zutatenmenge direkt ändern und alle übrigen Mengen proportional berechnen
 - Rezeptbilder, Favoriten, Suche und Druckansicht
@@ -24,11 +26,11 @@ In Settings → Pages „Deploy from a branch“, Branch `main` und Ordner `/(ro
 
 Persönliche Rezepte und Bilder liegen im Browser und werden nicht in dieses Repository hochgeladen. Regelmäßig unter „Daten & App“ eine Sicherung exportieren. Unterschiedliche Geräte und Browser haben getrennte Sammlungen.
 
-Im geöffneten Rezept kann jede Zutatenmenge direkt geändert werden. Die übrigen Mengen werden daraus proportional anhand der Originalmengen berechnet. Auch ein Wechsel zu einer anderen Zutat ist möglich. „Originalmengen“ setzt die Ansicht zurück. Die gespeicherten Originalmengen bleiben unverändert; zum dauerhaften Ändern des Grundrezepts dient der Rezepteditor. Zutaten mit Originalmenge 0 bleiben 0 und können nicht als Berechnungsgrundlage verwendet werden. Back-, Gar- und Reifezeiten werden nicht automatisch skaliert. Vorhandene Rezepte und Sicherungen bleiben lesbar.
+Im geöffneten Rezept kann jede Zutatenmenge direkt geändert werden. Die übrigen Mengen werden daraus proportional anhand der Originalmengen berechnet. Auch ein Wechsel zu einer anderen Zutat ist möglich. „Originalmengen“ setzt die Ansicht zurück. Die gespeicherten Originalmengen bleiben unverändert; zum dauerhaften Ändern des Grundrezepts dient der Rezepteditor. Zutaten ohne Menge werden mit einer leeren Mengenangabe gespeichert und beim Skalieren nicht verändert. Eine fehlende Menge wird nicht als 0 behandelt. Menge und Einheit können unabhängig voneinander leer bleiben. Auch Rezepte ganz ohne Mengenangaben lassen sich speichern. Zutaten mit Originalmenge 0 bleiben 0. Nur positive Originalmengen können als Berechnungsgrundlage dienen. Die Pfeile im Editor verschieben die ganze Zutatenzeile samt Namen, Menge, Einheit und ID; beim Speichern und beim Export/Import bleibt die Reihenfolge erhalten. Back-, Gar- und Reifezeiten werden nicht automatisch skaliert. Vorhandene Rezepte und Sicherungen bleiben lesbar.
 
 ## Prüfung
 
-73 automatisierte fachliche und simulierte Offline-Tests bestanden; beide statischen Starthelfer auf Linux geprüft. Die Tests simulieren Wake-Lock- und Offline-Lebenszyklen. Ein automatisierter Test auf echten iPhones oder Android-Geräten wurde nicht durchgeführt.
+80 automatisierte fachliche und simulierte Offline-Tests bestanden; beide statischen Starthelfer auf Linux geprüft. Die Tests simulieren Wake-Lock- und Offline-Lebenszyklen. Ein automatisierter Test auf echten iPhones oder Android-Geräten wurde nicht durchgeführt.
 
 Aktueller Quellcode und Tests liegen in diesem Repository.
 

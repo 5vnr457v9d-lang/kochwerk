@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {numberInput,formatAmount,decimalString,validateRecipe,scaleRecipe,validateBackup,mergeBackup,emptyData} from '../domain.js';
+import {numberInput,optionalNumberInput,formatAmount,decimalString,validateRecipe,scaleRecipe,validateBackup,mergeBackup,emptyData} from '../domain.js';
 import {demoData} from '../demo.js';
 
 const fixture=()=>validateBackup(demoData());
@@ -98,7 +98,40 @@ test('Auch doppelt benannte Zutaten werden eindeutig über ihre ID umgerechnet',
   const d=fixture(),r=d.recipes[0];r.ingredients[1].name=r.ingredients[0].name;
   const result=scaleRecipe(r,700,r.ingredients[1].id);assert.equal(result.ingredients[0].amount,1000);
 });
-test('Ein Rezept nur mit Nullmengen wird verständlich abgelehnt',()=>{
+test('Ein Rezept nur mit Nullmengen kann gespeichert, aber nicht umgerechnet werden',()=>{
   const d=fixture(),r=d.recipes[0];r.ingredients.forEach(i=>i.amount=0);
-  assert.throws(()=>validateRecipe(r,d.books),/Mindestens eine Zutatenmenge/);
+  const clean=validateRecipe(r,d.books);assert.ok(clean.ingredients.every(i=>i.amount===0));assert.throws(()=>scaleRecipe(clean,10));
+});
+
+test('Leere optionale Mengeneingaben bleiben von 0 unterscheidbar',()=>{
+  for(const value of ['', ' ', '\t'])assert.equal(optionalNumberInput(value),null);
+  assert.equal(optionalNumberInput('0'),0);assert.equal(optionalNumberInput('2,5'),2.5);
+  assert.throws(()=>optionalNumberInput('Salz'));assert.throws(()=>optionalNumberInput('-2'));
+});
+test('Ein Rezept kann vollständig ohne Mengen und Einheiten gespeichert werden',()=>{
+  const d=fixture(),r=d.recipes[0];r.ingredients.forEach(i=>{delete i.amount;delete i.unit;});
+  const clean=validateRecipe(r,d.books);assert.ok(clean.ingredients.every(i=>i.amount===null&&i.unit===''));assert.equal(clean.masterId,undefined);
+});
+test('Menge und Einheit sind unabhängig voneinander optional',()=>{
+  const d=fixture(),r=d.recipes[0];r.ingredients[0].amount=null;r.ingredients[0].unit='nach Geschmack';r.ingredients[1].unit='';
+  const clean=validateRecipe(r,d.books);assert.equal(clean.ingredients[0].amount,null);assert.equal(clean.ingredients[0].unit,'nach Geschmack');assert.equal(clean.ingredients[1].amount,350);assert.equal(clean.ingredients[1].unit,'');
+});
+test('Zutaten ohne Menge bleiben beim Skalieren ohne Menge und unverändert benannt',()=>{
+  const d=fixture(),r=d.recipes[0];r.ingredients[1].amount=null;const before=structuredClone(r);
+  const result=scaleRecipe(r,1000,r.ingredients[0].id);assert.equal(result.ingredients[0].amount,1000);assert.equal(result.ingredients[1].amount,null);assert.equal(result.ingredients[1].unit,'g');assert.equal(result.ingredients[3].amount,20);assert.deepEqual(r,before);
+  assert.throws(()=>scaleRecipe(r,10,r.ingredients[1].id));
+});
+test('Sicherung und Import erhalten fehlende Mengen und Zutatenreihenfolge',()=>{
+  const d=fixture(),r=d.recipes[0];r.ingredients.reverse();r.ingredients[1].amount=null;r.ingredients[1].unit='';
+  const clean=validateBackup(d),roundtrip=validateBackup(JSON.parse(JSON.stringify(clean)));
+  assert.deepEqual(roundtrip,clean);const imported=mergeBackup(emptyData(),roundtrip);assert.deepEqual(imported.recipes[0].ingredients,clean.recipes[0].ingredients);
+});
+test('Entfernen der letzten bezifferten Menge verhindert weiteres Speichern nicht',()=>{
+  const d=fixture(),r=d.recipes[0];r.ingredients=r.ingredients.map(i=>({...i,amount:null}));
+  const clean=validateRecipe(r,d.books);assert.equal(clean.ingredients.length,r.ingredients.length);assert.ok(clean.ingredients.every(i=>i.amount===null));assert.throws(()=>scaleRecipe(clean,100));
+});
+test('Umsortieren behält Identitäten und Zuordnung von Mengen, Einheiten und Skalierungsbasis',()=>{
+  const d=fixture(),r=d.recipes[0],original=structuredClone(r.ingredients);r.ingredients=[r.ingredients[2],r.ingredients[0],r.ingredients[3],r.ingredients[1]];
+  const clean=validateRecipe(r,d.books);assert.deepEqual(clean.ingredients,r.ingredients);
+  const result=scaleRecipe(clean,1000,original[0].id);for(const i of result.ingredients){const old=original.find(j=>j.id===i.id);assert.equal(i.amount,old.amount*2);assert.equal(i.name,old.name);assert.equal(i.unit,old.unit);}
 });

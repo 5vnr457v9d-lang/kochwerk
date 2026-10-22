@@ -7,6 +7,7 @@ export function numberInput(value) {
   if (!Number.isFinite(n)) throw new Error('Die Zahl ist zu groß.');
   return n;
 }
+export const optionalNumberInput = value => String(value).trim()===''?null:numberInput(value);
 export const formatAmount = n => new Intl.NumberFormat('de-DE',{maximumFractionDigits:3}).format(n);
 export function decimalString(n) {
   const [coefficient,exponent]=String(n).split('e');
@@ -27,13 +28,13 @@ export function validateRecipe(r, books) {
   const title=string(r.title,'Rezeptname',160); if(!title)throw new Error('Bitte einen Rezeptnamen angeben.');
   if(!Array.isArray(r.ingredients)||r.ingredients.length<1||r.ingredients.length>150)throw new Error('Ein Rezept braucht 1 bis 150 Zutaten.');
   const ingredients=r.ingredients.map(i=>{
-    const name=string(i.name,'Zutat',160), unit=string(i.unit,'Einheit',30);
-    if(!name||typeof i.amount!=='number'||!Number.isFinite(i.amount)||i.amount<0||i.amount>1e12)throw new Error('Jede Zutat braucht einen Namen und eine Menge zwischen 0 und 1 Billion.');
-    return {id:id(i.id),name,amount:i.amount,unit};
+    const name=string(i.name,'Zutat',160),unit=string(i.unit??'','Einheit',30),amount=i.amount??null;
+    if(!name)throw new Error('Jede Zutat braucht einen Namen.');
+    if(amount!==null&&(typeof amount!=='number'||!Number.isFinite(amount)||amount<0||amount>1e12))throw new Error('Eine eingetragene Zutatenmenge muss zwischen 0 und 1 Billion liegen.');
+    return {id:id(i.id),name,amount,unit};
   }); unique(ingredients);
   // Retain the legacy field for existing version-1 backups; the UI no longer selects a master.
   const masterId=ingredients.find(i=>i.id===r.masterId&&i.amount>0)?.id??ingredients.find(i=>i.amount>0)?.id;
-  if(!masterId)throw new Error('Mindestens eine Zutatenmenge muss größer als 0 sein.');
   if(!Array.isArray(r.bookIds)||r.bookIds.some(b=>!books.some(x=>x.id===b)))throw new Error('Unbekanntes Kochbuch.');
   if(!Array.isArray(r.steps)||r.steps.length>150)throw new Error('Ungültige Zubereitung.');
   if(!Number.isInteger(r.minutes)||r.minutes<0||r.minutes>100000)throw new Error('Zeit muss eine ganze Zahl zwischen 0 und 100000 sein.');
@@ -49,6 +50,7 @@ export function scaleRecipe(recipe,target,ingredientId=recipe.masterId) {
   const factor=target/reference.amount;
   if(!Number.isFinite(factor)||factor<=0)throw new Error('Ungültiger Skalierungsfaktor.');
   const ingredients=recipe.ingredients.map(i=>{
+    if(i.amount==null)return {...i,amount:null};
     const amount=i.amount*factor;
     if(!Number.isFinite(amount)||(i.amount>0&&amount===0))throw new Error('Die Zielmenge ist zu groß oder zu klein.');
     return {...i,amount};

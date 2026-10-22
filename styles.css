@@ -22,3 +22,7 @@
 
 /* One consistent clear control, including Safari's search fields. */
 .search{padding-right:4px}.search-clear{flex-shrink:0;min-width:44px;min-height:44px;color:#67775e}.search-clear[hidden]{display:none}.search input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none}
+
+/* Reordering preserves the existing inputs and their unsaved values. */
+.ingredients-editor-header,.ingredient-row{grid-template-columns:minmax(90px,1fr) 90px 75px 132px}.ingredient-actions{display:flex;justify-content:flex-end}.ingredient-row .ingredient-actions .icon-button{width:44px;min-width:44px;min-height:44px;padding:10px}.move-up svg{transform:rotate(90deg)}.move-down svg{transform:rotate(-90deg)}.ingredient-actions button:disabled{cursor:default;opacity:.3}
+@media(max-width:760px){.ingredients-editor-header,.ingredient-row{grid-template-columns:minmax(0,1fr) 76px 64px}.ingredients-editor-header>span:last-child{display:none}.ingredient-actions{grid-column:1/-1}.ingredient-row{padding-bottom:8px;border-bottom:1px solid var(--line);row-gap:3px}}
